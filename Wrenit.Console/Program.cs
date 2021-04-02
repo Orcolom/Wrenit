@@ -7,16 +7,36 @@ namespace Wrenit.Consoles
 	internal class Program
 	{
 		private static string _script = @"
+		import ""c"" for const_x
 System.write(""test"")
-System.print(""test"")
+System.print(const_x)
 		";
+
+		private static string _const = @"
+var const_x = ""Hello""
+		";
+
 		public static void Main(string[] args)
 		{
 			WrenitVM vm = new WrenitVM();
-			vm.ErrorEvent += Vm_ErrorEvent;
-			vm.WriteEvent += Vm_WriteEvent;
+			vm.ErrorHandler = Vm_ErrorEvent;
+			vm.WriteHandler = Vm_WriteEvent;
+
+			vm.ResolveModuleHandler = (WrenitVM _, string importer, string name) =>
+			{
+				//if (name == "c") return "const";
+				return name;
+			};
+			vm.LoadModuleHandler = (WrenitVM __, string name) =>
+			{
+				if (name == "const")
+				{
+					return new WrenitLoadModuleResult() { Source = _const };
+				}
+				return new WrenitLoadModuleResult();
+			};
+
 			vm.Interpret("main", _script);
-			
 		}
 
 		private static void Vm_WriteEvent(WrenitVM vm, string text)

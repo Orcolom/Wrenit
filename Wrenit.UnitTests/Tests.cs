@@ -21,12 +21,12 @@ namespace Wrenit.UnitTests
 			WrenitVM wrenitVM = new WrenitVM();
 			string msg = "abc";
 
-			wrenitVM.WriteEvent += (WrenitVM _, string text) =>
+			wrenitVM.WriteHandler = (WrenitVM _, string text) =>
 			{
 				Assert.AreEqual(text, msg);
 			};
 
-			wrenitVM.ErrorEvent += (WrenitVM vm, WrenitResult result, string module, int line, string message) =>
+			wrenitVM.ErrorHandler = (WrenitVM vm, WrenitResult result, string module, int line, string message) =>
 			{
 				Assert.IsTrue(false, "script execution failed");
 			};
@@ -40,12 +40,12 @@ namespace Wrenit.UnitTests
 			WrenitVM wrenitVM = new WrenitVM();
 			string msg = ";";
 
-			wrenitVM.WriteEvent += (WrenitVM _, string text) =>
+			wrenitVM.WriteHandler += (WrenitVM _, string text) =>
 			{
 				Assert.IsTrue(false, "should not be hit");
 			};
 
-			wrenitVM.ErrorEvent += (WrenitVM vm, WrenitResult result, string module, int line, string message) =>
+			wrenitVM.ErrorHandler = (WrenitVM vm, WrenitResult result, string module, int line, string message) =>
 			{
 				Assert.AreEqual(WrenitResult.CompileError, result);
 				Assert.IsTrue(message.Contains(msg));
@@ -60,13 +60,13 @@ namespace Wrenit.UnitTests
 			WrenitVM wrenitVM = new WrenitVM();
 			string msg = "writ";
 
-			wrenitVM.WriteEvent += (WrenitVM _, string text) =>
+			wrenitVM.WriteHandler += (WrenitVM _, string text) =>
 			{
 				Assert.IsTrue(false, "should not be hit");
 			};
 
 			bool first = true;
-			wrenitVM.ErrorEvent += (WrenitVM vm, WrenitResult result, string module, int line, string message) =>
+			wrenitVM.ErrorHandler = (WrenitVM vm, WrenitResult result, string module, int line, string message) =>
 			{
 				if (first)
 				{
