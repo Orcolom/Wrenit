@@ -18,55 +18,56 @@ namespace Wrenit.UnitTests
 		[Test]
 		public void VmWrite()
 		{
-			WrenitVM wrenitVM = new WrenitVM();
+			WrenitConfig config = WrenitConfig.GetDefaults();
 			string msg = "abc";
 
-			wrenitVM.WriteHandler = (WrenitVM _, string text) =>
+			
+			config.WriteHandler += (WrenitVM _, string text) =>
 			{
 				Assert.AreEqual(text, msg);
 			};
 
-			wrenitVM.ErrorHandler = (WrenitVM vm, WrenitResult result, string module, int line, string message) =>
+			config.ErrorHandler += (WrenitVM vm, WrenitResult result, string module, int line, string message) =>
 			{
 				Assert.IsTrue(false, "script execution failed");
 			};
 
-			wrenitVM.Interpret("m", $"System.write(\"{msg}\")");
+			new WrenitVM(config).Interpret("m", $"System.write(\"{msg}\")");
 		}
 
 		[Test]
 		public void VmCompileError()
 		{
-			WrenitVM wrenitVM = new WrenitVM();
+			WrenitConfig config = WrenitConfig.GetDefaults();
 			string msg = ";";
 
-			wrenitVM.WriteHandler += (WrenitVM _, string text) =>
+			config.WriteHandler += (WrenitVM _, string text) =>
 			{
 				Assert.IsTrue(false, "should not be hit");
 			};
 
-			wrenitVM.ErrorHandler = (WrenitVM vm, WrenitResult result, string module, int line, string message) =>
+			config.ErrorHandler = (WrenitVM vm, WrenitResult result, string module, int line, string message) =>
 			{
 				Assert.AreEqual(WrenitResult.CompileError, result);
 				Assert.IsTrue(message.Contains(msg));
 			};
 			
-			wrenitVM.Interpret("m", $"System.write(\"abc\"){msg}");
+			new WrenitVM(config).Interpret("m", $"System.write(\"abc\"){msg}");
 		}
 
 		[Test]
 		public void VmRuntimeError()
 		{
-			WrenitVM wrenitVM = new WrenitVM();
+			WrenitConfig config = WrenitConfig.GetDefaults();
 			string msg = "writ";
 
-			wrenitVM.WriteHandler += (WrenitVM _, string text) =>
+			config.WriteHandler += (WrenitVM _, string text) =>
 			{
 				Assert.IsTrue(false, "should not be hit");
 			};
 
 			bool first = true;
-			wrenitVM.ErrorHandler = (WrenitVM vm, WrenitResult result, string module, int line, string message) =>
+			config.ErrorHandler = (WrenitVM vm, WrenitResult result, string module, int line, string message) =>
 			{
 				if (first)
 				{
@@ -82,7 +83,7 @@ namespace Wrenit.UnitTests
 				}
 			};
 
-			wrenitVM.Interpret("m", $"System.{msg}(\"abc\")");
+			new WrenitVM(config).Interpret("m", $"System.{msg}(\"abc\")");
 		}
 	}
 }

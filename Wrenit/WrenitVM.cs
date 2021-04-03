@@ -7,6 +7,14 @@ using System.Threading.Tasks;
 
 namespace Wrenit
 {
+	public delegate void WrenitWrite(WrenitVM vm, string text);
+
+	public delegate void WrenitError(WrenitVM vm, WrenitResult result, string module, int line, string message);
+
+	public delegate string WrenitResolveModule(WrenitVM vm, string importer, string name);
+
+	public delegate WrenitLoadModuleResult WrenitLoadModule(WrenitVM vm, string name);
+
 	public enum WrenitResult
 	{
 		Unknown,
@@ -26,51 +34,33 @@ namespace Wrenit
 	{
 		private IntPtr _vm;
 
-		private WrenReallocateFn _reallocateFn;
+		private WrenitConfig _config;
 
 		public bool IsAlive => _vm != IntPtr.Zero;
 
-		#region Events/Callbacks
-
-		public delegate void WrenitWrite(WrenitVM vm, string text);
-		public WrenitWrite WriteHandler;
-
-		public delegate void WrenitError(WrenitVM vm, WrenitResult result, string module, int line, string message);
-		public WrenitError ErrorHandler;
-
-		public delegate string WrenitResolveModule(WrenitVM vm, string importer, string name);
-		public WrenitResolveModule ResolveModuleHandler;
-
-		public delegate WrenitLoadModuleResult WrenitLoadModule(WrenitVM vm, string name);
-		public WrenitLoadModule LoadModuleHandler;
-
-		#endregion
-
-		public WrenitVM() : this(WrenitConfig.GetDefaults()) { }
-
-		public WrenitVM(WrenitConfig config)
+		public WrenitVM()
 		{
-			_reallocateFn = config.ReallocateFn;
-			
-			WrenConfig wrenConfig = new WrenConfig()
+			_vm = WrenImport.xWrenNewVM(null);
+		}
+
+		public WrenitVM(WrenitConfig wrenitConfig)
+		{
+			_config = wrenitConfig;
+
+			WrenConfig wrenConfig = null;
+			wrenConfig = new WrenConfig
 			{
-				ReallocateFn = config.ReallocateFn,
-				
-				WrenWriteFn = OnWrenWrite,
-				WrenErrorFn = OnWrenError,
-
-				ResolveModuleFn = OnWrenResolveModuleName,
-				LoadModuleFn = onWrenLoadModule,
-				
-				bindForeignClassFn = null,
-				bindForeignMethodFn = null,
-
-				initialHeapSize = new UIntPtr(config.InitialHeapSize),
-				minHeapSize = new UIntPtr(config.MinHeapSize),
-				heapGrowthPercent = config.HeapGrowthPercent,
-				
-				userData = IntPtr.Zero,
+				initialHeapSize = new UIntPtr(wrenitConfig.InitialHeapSize),
+				minHeapSize = new UIntPtr(wrenitConfig.MinHeapSize),
+				heapGrowthPercent = wrenitConfig.HeapGrowthPercent
 			};
+
+			// make native "bindings" for wanted functions
+			if (wrenitConfig.WriteHandler != null) wrenConfig.WrenWriteFn = OnWrenWrite;
+			if (wrenitConfig.ErrorHandler != null) wrenConfig.WrenErrorFn = OnWrenError;
+			if (wrenitConfig.ResolveModuleHandler != null) wrenConfig.ResolveModuleFn = OnWrenResolveModuleName;
+			if (wrenitConfig.LoadModuleHandler != null) wrenConfig.LoadModuleFn = onWrenLoadModule;
+
 			_vm = WrenImport.xWrenNewVM(wrenConfig);
 		}
 
@@ -119,14 +109,14 @@ namespace Wrenit
 
 		private WrenitResult ProcessEnum(WrenErrorType error)
 		{
-			switch(error)
+			switch (error)
 			{
 				default:
 					return WrenitResult.Unknown;
 
 				case WrenErrorType.WREN_ERROR_COMPILE:
 					return WrenitResult.CompileError;
-				
+
 				case WrenErrorType.WREN_ERROR_RUNTIME:
 					return WrenitResult.RuntimeError;
 
@@ -135,24 +125,47 @@ namespace Wrenit
 			}
 		}
 
-		private void OnWrenWrite(IntPtr vm, string text) => WriteHandler?.Invoke(this, text);
-		private void OnWrenError(IntPtr vm, WrenErrorType type, string module, int line, string message) => ErrorHandler?.Invoke(this, ProcessEnum(type), module, line, message);
+		private void OnWrenWrite(IntPtr vm, string text)
+		{
+			var list = _config.WriteHandler.GetInvocationList();
+			for (int i = 0; i < list.Length; i++)
+			{
+				WrenitWrite write = list[i] as WrenitWrite;
+				write.Invoke(this, text);
+			}
+		}
+
+		private void OnWrenError(IntPtr vm, WrenErrorType type, string module, int line, string message)
+		{
+			var list = _config.ErrorHandler.GetInvocationList();
+			WrenitResult result = ProcessEnum(type);
+			for (int i = 0; i < list.Length; i++)
+			{
+				WrenitError error = list[i] as WrenitError;
+				error.Invoke(this, result, module, line, message);
+			}
+		}
 		
 		private IntPtr OnWrenResolveModuleName(IntPtr vm, string importer, IntPtr namePtr)
 		{
-			if (ResolveModuleHandler == null) return namePtr;
-
-
 			string name = Marshal.PtrToStringAnsi(namePtr);
+			string resolved = null;
 
-			string resolved = ResolveModuleHandler?.Invoke(this, importer, name);
-			if (resolved == name) return namePtr;
+			var list = _config.ResolveModuleHandler.GetInvocationList();
+			for (int i = 0; i < list.Length; i++)
+			{
+				WrenitResolveModule resolve = list[i] as WrenitResolveModule;
+				resolved = resolve.Invoke(this, importer, name);
+				if (string.IsNullOrEmpty(resolved) == false) break;
+			}
+
+			if (resolved == name || string.IsNullOrEmpty(resolved)) return namePtr;
 
 			// the name needs to be given in wren's managed memory
 			// 1. create an char* string
 			IntPtr unmanagedName = Marshal.StringToHGlobalAnsi(resolved);
 			UIntPtr size = new UIntPtr((uint)(resolved.Length + 1) * (uint)IntPtr.Size);
-			
+
 			// 2. create pointer in wren managed memory 
 			IntPtr ptr = WrenImport.xWrenReallocate(_vm, IntPtr.Zero, UIntPtr.Zero, size);
 
@@ -171,14 +184,20 @@ namespace Wrenit
 
 		private LoadModuleResult onWrenLoadModule(IntPtr vm, string name)
 		{
-			if (LoadModuleHandler != null)
+			var list = _config.LoadModuleHandler.GetInvocationList();
+			for (int i = 0; i < list.Length; i++)
 			{
-				var ret = LoadModuleHandler?.Invoke(this, name);
+				WrenitLoadModule load = list[i] as WrenitLoadModule;
+
+				WrenitLoadModuleResult result = load.Invoke(this, name);
+				if (result == null || result.Source == null) continue;
+				
 				return new LoadModuleResult()
 				{
-					source = ret.Source
+					source = result.Source
 				};
 			}
+
 			return new LoadModuleResult();
 		}
 	}

@@ -13,6 +13,8 @@ namespace Wrenit
 		private const string wrenDll  = "wren.dll";
 #endif
 
+		#region Imports
+
 		[DllImport(wrenDll)]
 		internal extern static void xWrenInitConfiguration([Out] WrenConfig config);
 
@@ -30,5 +32,11 @@ namespace Wrenit
 
 		[DllImport(wrenDll)]
 		internal extern static WrenInterpretResult xWrenInterpret(IntPtr vm, string module, string source);
+
+		#endregion
+
+		#region Types/Delegates
+
+		#endregion
 	}
 }

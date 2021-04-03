@@ -18,16 +18,17 @@ var const_x = ""Hello""
 
 		public static void Main(string[] args)
 		{
-			WrenitVM vm = new WrenitVM();
-			vm.ErrorHandler = Vm_ErrorEvent;
-			vm.WriteHandler = Vm_WriteEvent;
+			WrenitConfig config = WrenitConfig.GetDefaults();
+			config.ErrorHandler += Vm_ErrorEvent;
+			config.WriteHandler += Vm_WriteEvent;
 
-			vm.ResolveModuleHandler = (WrenitVM _, string importer, string name) =>
+			config.ResolveModuleHandler += (WrenitVM _, string importer, string name) =>
 			{
 				if (name == "c") return "const";
 				return name;
 			};
-			vm.LoadModuleHandler = (WrenitVM __, string name) =>
+
+			config.LoadModuleHandler += (WrenitVM __, string name) =>
 			{
 				if (name == "const")
 				{
@@ -36,6 +37,7 @@ var const_x = ""Hello""
 				return new WrenitLoadModuleResult();
 			};
 
+			WrenitVM vm = new WrenitVM();
 			vm.Interpret("main", _script);
 		}
 

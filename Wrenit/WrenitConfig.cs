@@ -3,9 +3,11 @@ using System.Runtime.InteropServices;
 
 namespace Wrenit
 {
-	public class WrenitConfig
+	public struct WrenitConfig
 	{
+		// TODO: static nullables broke unit tests?
 		private static WrenitConfig _default;
+		private static bool _hasDefaults;
 
 		public ulong InitialHeapSize;
 
@@ -13,23 +15,27 @@ namespace Wrenit
 
 		public int HeapGrowthPercent;
 
-		internal WrenReallocateFn ReallocateFn;
-
-		private WrenitConfig() { }
+		public WrenitWrite WriteHandler;
+		
+		public WrenitError ErrorHandler;
+		
+		public WrenitResolveModule ResolveModuleHandler;
+		
+		public WrenitLoadModule LoadModuleHandler;
 
 		public static WrenitConfig GetDefaults()
 		{
-			if (_default != null) return _default;
+			if (_hasDefaults) return _default;
 			WrenConfig wrenConfig = new WrenConfig();
 			WrenImport.xWrenInitConfiguration(wrenConfig);
 
+			_hasDefaults = true;
 			_default = new WrenitConfig()
 			{
 				HeapGrowthPercent = wrenConfig.heapGrowthPercent,
 				InitialHeapSize = wrenConfig.initialHeapSize.ToUInt64(),
 				MinHeapSize = wrenConfig.initialHeapSize.ToUInt64(),
 			};
-			_default.ReallocateFn = wrenConfig.ReallocateFn;
 
 			return _default;
 		}
