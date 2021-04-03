@@ -24,7 +24,7 @@ var const_x = ""Hello""
 
 			vm.ResolveModuleHandler = (WrenitVM _, string importer, string name) =>
 			{
-				//if (name == "c") return "const";
+				if (name == "c") return "const";
 				return name;
 			};
 			vm.LoadModuleHandler = (WrenitVM __, string name) =>

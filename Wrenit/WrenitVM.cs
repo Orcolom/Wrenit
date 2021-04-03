@@ -171,16 +171,13 @@ namespace Wrenit
 
 		private LoadModuleResult onWrenLoadModule(IntPtr vm, string name)
 		{
-			return new LoadModuleResult()
-			{
-				source = null,
-				onComplete = null,
-				userData = new IntPtr(1),
-			};
-
 			if (LoadModuleHandler != null)
 			{
-				var ret = LoadModuleHandler?.Invoke(this, "");
+				var ret = LoadModuleHandler?.Invoke(this, name);
+				return new LoadModuleResult()
+				{
+					source = ret.Source
+				};
 			}
 			return new LoadModuleResult();
 		}
