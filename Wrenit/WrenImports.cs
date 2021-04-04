@@ -16,25 +16,26 @@ namespace Wrenit
 		#region Imports
 		
 		[DllImport(wrenDll)]
-		internal extern static void xWrenInitConfiguration([Out] WrenConfig config);
+		internal extern static void wrenInitConfiguration([Out] WrenConfig config);
 
 		[DllImport(wrenDll)]
-		internal extern static IntPtr xWrenNewVM(WrenConfig config);
+		internal extern static IntPtr wrenNewVM(WrenConfig config);
 
 		[DllImport(wrenDll)]
-		internal extern static IntPtr xWrenFreeVM(IntPtr vm);
+		internal extern static IntPtr wrenFreeVM(IntPtr vm);
 
 		[DllImport(wrenDll)]
-		internal extern static IntPtr xWrenCollectGarbage(IntPtr vm);
+		internal extern static IntPtr wrenCollectGarbage(IntPtr vm);
 
 		[DllImport(wrenDll)]
-		internal extern static IntPtr xWrenReallocate(IntPtr vm, IntPtr memory, UIntPtr oldSize, UIntPtr newSize);
+		internal extern static IntPtr wrenReallocate(IntPtr vm, IntPtr memory, UIntPtr oldSize, UIntPtr newSize);
 
 		[DllImport(wrenDll)]
-		internal extern static WrenInterpretResult xWrenInterpret(IntPtr vm, string module, string source);
+		internal extern static WrenInterpretResult wrenInterpret(IntPtr vm, string module, string source);
 
+		[DllImport(wrenDll)]
+		internal extern static WrenValueType wrenGetSlotType(IntPtr vm, int slot);
 		#endregion
-
 	}
 
 	#region Types/Delegates
@@ -62,14 +63,33 @@ namespace Wrenit
 		[MarshalAs(UnmanagedType.LPStr)] string name,
 		LoadModuleResult result);
 
-	[StructLayout(LayoutKind.Sequential)]
-	internal class LoadModuleResult
-	{
-		[MarshalAs(UnmanagedType.LPStr)]
-		public string source;
 
-		[MarshalAs(UnmanagedType.FunctionPtr)]
-		public WrenLoadModuleCompleteFn onComplete;
+	internal delegate IntPtr WrenBindForeignMethodFn(IntPtr vm,
+		[MarshalAs(UnmanagedType.LPStr)] string module,
+		[MarshalAs(UnmanagedType.LPStr)] string className,
+		[MarshalAs(UnmanagedType.I1)] bool isStatic,
+		[MarshalAs(UnmanagedType.LPStr)] string signature);
+
+	internal delegate void WrenForeignMethodFn(IntPtr vm);
+	
+	public delegate void WrenFinalizerFn(IntPtr data);
+
+	internal delegate WrenForeignClassMethods WrenBindForeignClassFn(IntPtr vm,
+		[MarshalAs(UnmanagedType.LPStr)] string module,
+		[MarshalAs(UnmanagedType.LPStr)] string className);
+
+	internal struct WrenForeignClassMethods
+	{
+		public IntPtr allocate;
+
+		public IntPtr finalize;
+	}
+
+	internal struct LoadModuleResult
+	{
+		public IntPtr source;
+
+		public IntPtr onComplete;
 
 		public IntPtr userData;
 	}
@@ -86,6 +106,20 @@ namespace Wrenit
 		SUCCESS,
 		WREN_ERROR_COMPILE,
 		WREN_ERROR_RUNTIME,
+	}
+
+	internal enum WrenValueType
+	{
+		WREN_TYPE_BOOL,
+		WREN_TYPE_NUM,
+		WREN_TYPE_FOREIGN,
+		WREN_TYPE_LIST,
+		WREN_TYPE_MAP,
+		WREN_TYPE_NULL,
+		WREN_TYPE_STRING,
+
+		// The object is of a type that isn't accessible by the C API.
+		WREN_TYPE_UNKNOWN
 	}
 
 	[StructLayout(LayoutKind.Sequential)]

@@ -15,6 +15,10 @@ namespace Wrenit
 
 	public delegate WrenitLoadModuleResult WrenitLoadModule(WrenitVM vm, string name);
 
+	public delegate WrenitFunction WrenitBindForeignMethod(WrenitVM vm, string module, string className, bool isStatic, string signature);
+	
+	public delegate WrenitClass WrenitBindForeignClass(WrenitVM vm, string module, string className);
+
 	public enum WrenitResult
 	{
 		Unknown,
@@ -25,22 +29,45 @@ namespace Wrenit
 		Disposed,
 	}
 
+	public enum WrenitValueType
+	{
+		Bool,
+		Number,
+		Foreign,
+		List,
+		Map,
+		Null,
+		String,
+		Unknown,
+	}
+
 	public class WrenitLoadModuleResult
 	{
 		public string Source;
 	}
 
+	public struct WrenitForeignClass
+	{
+		public WrenitFunction Allocator;
+		public WrenitFinalizerFunction Finalizer;
+	}
+
 	public class WrenitVM : IDisposable
 	{
+		private static Dictionary<IntPtr, WeakReference<WrenitVM>> _vms = new Dictionary<IntPtr, WeakReference<WrenitVM>>();
+
 		private IntPtr _vm;
 
 		private WrenitConfig _config;
 
 		public bool IsAlive => _vm != IntPtr.Zero;
 
+		#region Lifetime
+
 		public WrenitVM()
 		{
-			_vm = WrenImport.xWrenNewVM(null);
+			_vm = WrenImport.wrenNewVM(null);
+			_vms.Add(_vm, new WeakReference<WrenitVM>(this));
 		}
 
 		public WrenitVM(WrenitConfig wrenitConfig)
@@ -60,32 +87,54 @@ namespace Wrenit
 			if (wrenitConfig.ErrorHandler != null) wrenConfig.WrenErrorFn = OnWrenError;
 			if (wrenitConfig.ResolveModuleHandler != null) wrenConfig.ResolveModuleFn = OnWrenResolveModuleName;
 			if (wrenitConfig.LoadModuleHandler != null) wrenConfig.LoadModuleFn = onWrenLoadModule;
+			if (wrenitConfig.BindForeignMethod != null) wrenConfig.bindForeignMethodFn = onWrenBindForeignMethod;
+			if (wrenitConfig.BindForeignClass != null) wrenConfig.bindForeignClassFn= onWrenBindForeignClass;
 
-			_vm = WrenImport.xWrenNewVM(wrenConfig);
+			_vm = WrenImport.wrenNewVM(wrenConfig);
+			_vms.Add(_vm, new WeakReference<WrenitVM>(this));
 		}
 
 		~WrenitVM()
 		{
-			WrenImport.xWrenFreeVM(_vm);
+			_vms.Remove(_vm);
+
+			WrenImport.wrenFreeVM(_vm);
 			_vm = IntPtr.Zero;
 		}
 
 		public void Dispose()
 		{
 			if (IsAlive == false) return;
-
-			WrenImport.xWrenFreeVM(_vm);
+			
+			_vms.Remove(_vm);
+			
+			WrenImport.wrenFreeVM(_vm);
 			_vm = IntPtr.Zero;
 
 			GC.SuppressFinalize(this);
 		}
+
+		internal static WrenitVM GetVM(IntPtr ptr)
+		{
+			if (_vms.TryGetValue(ptr, out WeakReference<WrenitVM> weakRef))
+			{
+				if (weakRef.TryGetTarget(out WrenitVM vm))
+				{
+					return vm;
+				}
+				return null;
+			}
+			return null;
+		}
+
+		#endregion
 
 		public WrenitResult Interpret(string module, string source)
 		{
 			if (IsAlive == false)
 				throw new ObjectDisposedException("Tried to Interpret module in disposed VM");
 
-			WrenInterpretResult error = WrenImport.xWrenInterpret(_vm, module, source);
+			WrenInterpretResult error = WrenImport.wrenInterpret(_vm, module, source);
 			return ProcessEnum(error);
 		}
 
@@ -124,6 +173,15 @@ namespace Wrenit
 					return WrenitResult.StackTrace;
 			}
 		}
+
+		private WrenitValueType ProcessEnum(WrenValueType type)
+		{
+			int typeAsInt = (int)type;
+			if (typeAsInt > (int)WrenitValueType.Unknown) typeAsInt = (int)WrenitValueType.Unknown;
+			return (WrenitValueType)typeAsInt;
+		}
+
+		#region Bindings
 
 		private void OnWrenWrite(IntPtr vm, string text)
 		{
@@ -167,7 +225,7 @@ namespace Wrenit
 			UIntPtr size = new UIntPtr((uint)(resolved.Length + 1) * (uint)IntPtr.Size);
 
 			// 2. create pointer in wren managed memory 
-			IntPtr ptr = WrenImport.xWrenReallocate(_vm, IntPtr.Zero, UIntPtr.Zero, size);
+			IntPtr ptr = WrenImport.wrenReallocate(_vm, IntPtr.Zero, UIntPtr.Zero, size);
 
 			// 3. copy char* string over
 			unsafe
@@ -191,14 +249,64 @@ namespace Wrenit
 
 				WrenitLoadModuleResult result = load.Invoke(this, name);
 				if (result == null || result.Source == null) continue;
-				
+
+				var ptr = Marshal.StringToCoTaskMemAnsi(result.Source);
 				return new LoadModuleResult()
 				{
-					source = result.Source
+					source = ptr,
+					userData = ptr,
+					onComplete = Marshal.GetFunctionPointerForDelegate<WrenLoadModuleCompleteFn>(onWrenLoadComplete),
 				};
 			}
 
 			return new LoadModuleResult();
 		}
+
+		private void onWrenLoadComplete(IntPtr vm, string name, LoadModuleResult result)
+		{
+			Marshal.FreeHGlobal(result.userData);
+		}
+
+		private WrenForeignClassMethods onWrenBindForeignClass(IntPtr vm, string module, string className)
+		{
+			var list = _config.BindForeignClass.GetInvocationList();
+			for (int i = 0; i < list.Length; i++)
+			{
+				WrenitBindForeignClass foreign = list[i] as WrenitBindForeignClass;
+				WrenitClass @class = foreign.Invoke(this, module, className);
+				if (@class.Allocator == null) continue;
+
+				return new WrenForeignClassMethods()
+				{
+					allocate = @class.Allocator.MethodPtr,
+					finalize = @class.Finalizer.MethodPtr,
+				};
+			}
+			return new WrenForeignClassMethods();
+		}
+
+		private IntPtr onWrenBindForeignMethod(IntPtr vm, string module, string className, bool isStatic, string signature)
+		{
+			var list = _config.BindForeignMethod.GetInvocationList();
+			for (int i = 0; i < list.Length; i++)
+			{
+				WrenitBindForeignMethod foreign = list[i] as WrenitBindForeignMethod;
+				WrenitFunction method = foreign.Invoke(this, module, className, isStatic, signature);
+				if (method == null) continue;
+				return method.MethodPtr;
+			}
+			return IntPtr.Zero;
+		}
+
+		#endregion
+
+		#region
+
+		public WrenitValueType GetSlotType(int slot)
+		{
+			return ProcessEnum(WrenImport.wrenGetSlotType(_vm, slot));
+		}
+
+		#endregion
 	}
 }

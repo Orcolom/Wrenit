@@ -23,11 +23,15 @@ namespace Wrenit
 		
 		public WrenitLoadModule LoadModuleHandler;
 
+		public WrenitBindForeignMethod BindForeignMethod;
+
+		public WrenitBindForeignClass BindForeignClass;
+
 		public static WrenitConfig GetDefaults()
 		{
 			if (_hasDefaults) return _default;
 			WrenConfig wrenConfig = new WrenConfig();
-			WrenImport.xWrenInitConfiguration(wrenConfig);
+			WrenImport.wrenInitConfiguration(wrenConfig);
 
 			_hasDefaults = true;
 			_default = new WrenitConfig()

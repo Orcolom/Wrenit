@@ -33,6 +33,9 @@
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>8.0</LangVersion>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -40,12 +43,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Config.cs" />
+    <Compile Include="WrenitModule.cs" />
     <Compile Include="WrenImports.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WrenitConfig.cs" />
     <Compile Include="WrenitVM.cs" />
-    <Compile Include="WrenTypes.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\..\Wren\lib\wren.dll">

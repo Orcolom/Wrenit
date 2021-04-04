@@ -7,17 +7,42 @@ namespace Wrenit.Consoles
 	internal class Program
 	{
 		private static string _script = @"
-		import ""c"" for const_x
+		import ""c"" for ClassA, ClassB
 System.write(""test"")
-System.print(const_x)
+System.print(ClassA.Two())
+System.print(ClassB.One(1,2,3))
 		";
 
-		private static string _const = @"
-var const_x = ""Hello""
-		";
+		public static void One(WrenitVM vm)
+		{
+			Console.WriteLine("One");
+		}
+
+		public static void Two(WrenitVM vm)
+		{
+			Console.WriteLine("Two");
+		}
 
 		public static void Main(string[] args)
 		{
+			WrenitModule wrenitModule = new WrenitModule("const",
+				@"
+					class ClassA {
+						foreign static Two()
+					}
+
+					foreign class ClassB {
+						foreign One(a,b,c)
+					}
+				",
+				new WrenitClass("ClassA", null, null,
+					new WrenitMethod(WrenitSignature.Method("Two"), true, Two)
+				),
+				new WrenitClass("ClassB", null, null,
+					new WrenitMethod(WrenitSignature.Method("One", 3), true, One)
+				)
+			);
+			
 			WrenitConfig config = WrenitConfig.GetDefaults();
 			config.ErrorHandler += Vm_ErrorEvent;
 			config.WriteHandler += Vm_WriteEvent;
@@ -32,12 +57,39 @@ var const_x = ""Hello""
 			{
 				if (name == "const")
 				{
-					return new WrenitLoadModuleResult() { Source = _const };
+					return new WrenitLoadModuleResult() { Source = wrenitModule.Source };
 				}
 				return new WrenitLoadModuleResult();
 			};
 
-			WrenitVM vm = new WrenitVM();
+			config.BindForeignMethod += (WrenitVM _, string module, string className, bool isStatic, string signature) =>
+			{
+				if (wrenitModule.Name == module) 
+				{
+					WrenitClass @class = wrenitModule.FindClass(className);
+					if (@class != null)
+					{
+						WrenitMethod method = @class.FindMethod(signature, isStatic);
+						if (method != null) return method.Method;
+					}
+				}
+				return null;
+			};
+
+			config.BindForeignClass += (WrenitVM _, string module, string className) =>
+			{
+				if (wrenitModule.Name == module)
+				{
+					WrenitClass @class = wrenitModule.FindClass(className);
+					if (@class != null)
+					{
+						return @class;
+					}
+				}
+				return null;
+			};
+
+			WrenitVM vm = new WrenitVM(config);
 			vm.Interpret("main", _script);
 		}
 
