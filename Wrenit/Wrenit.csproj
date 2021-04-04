@@ -44,6 +44,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Wren.cs" />
+    <Compile Include="WrenForeignObject.cs" />
     <Compile Include="WrenHandle.cs" />
     <Compile Include="WrenitBuilder.cs" />
     <Compile Include="WrenInterlop.cs" />

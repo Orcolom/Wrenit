@@ -38,8 +38,11 @@ namespace Wrenit.Builder
 		public WrenitClass(string name, WrenForeignMethod allocator, WrenFinalizer finalizer, params WrenitMethod[] methods)
 		{
 			Name = name;
-			_allocator = allocator != null ? new WrenForeignMethodBinding(allocator) : null;
-			_finalizer = finalizer != null ? new WrenFinalizerMethodBinding(finalizer) : null;
+			if (allocator != null)
+			{
+				_allocator = new WrenForeignMethodBinding(allocator);
+				_finalizer = new WrenFinalizerMethodBinding(finalizer);
+			}
 			_methods.AddRange(methods);
 		}
 

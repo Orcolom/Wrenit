@@ -43,12 +43,20 @@ namespace Wrenit
 	public class WrenFinalizerMethodBinding
 	{
 		public readonly IntPtr MethodPtr;
-		private WrenFinalizer _method;
+		private readonly WrenFinalizer _method;
 
 		public WrenFinalizerMethodBinding(WrenFinalizer method)
 		{
 			_method = method;
-			MethodPtr = Marshal.GetFunctionPointerForDelegate(method);
+			MethodPtr = Marshal.GetFunctionPointerForDelegate<WrenFinalizer>(OnFinalize);
+		}
+
+		private void OnFinalize(IntPtr data)
+		{
+			IntPtr vm = Marshal.ReadIntPtr(data);
+			IntPtr id = Marshal.ReadIntPtr(data, IntPtr.Size);
+			WrenVm.GetVm(vm).FreeForeignObject(id);
+			_method?.Invoke(id);
 		}
 	}
 

@@ -19,9 +19,10 @@ namespace Wrenit
 	{
 		public bool IsAlive => Ptr != IntPtr.Zero;
 
-		protected readonly WeakReference<WrenVm> _vm;
 		internal IntPtr Ptr;
+		private readonly WeakReference<WrenVm> _vm;
 
+		// ReSharper disable once UnusedMember.Local
 		private WrenHandle() { }
 
 		internal WrenHandle(WrenVm vm, IntPtr handle)

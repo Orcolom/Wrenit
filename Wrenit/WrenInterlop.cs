@@ -255,20 +255,37 @@ namespace Wrenit.Interlop
 		internal static extern void wrenSetSlotDouble(IntPtr vm, int slot, double value);
 		
 		/// <summary>
-		/// Reads a string from <paramref name="slot"/>.
+		/// Creates a new instance of the foreign class stored in [classSlot] with [size]
+		/// bytes of raw storage and places the resulting object in [slot].
 		///
 		/// <para>
-		/// 	The memory for the returned string is owned by Wren. You can inspect it
-		/// 	while in your foreign method, but cannot keep a pointer to it after the
-		/// 	function returns, since the garbage collector may reclaim it.
+		/// 	This does not invoke the foreign class's constructor on the new instance. If
+		/// 	you need that to happen, call the constructor from Wren, which will then
+		/// 	call the allocator foreign method. In there, call this to create the object
+		/// 	and then the constructor will be invoked when the allocator returns.
 		/// </para>
 		///
-		/// It is an error to call this if the slot does not contain a string.
+		/// Returns a pointer to the foreign object's data.
+		/// </summary>
+		/// <param name="vm">pointer to c vm</param>
+		/// <param name="slot">slot to get</param>
+		/// <param name="classSlot">slot to store in</param>
+		/// <param name="size">size of foreign data</param>
+		[DllImport(WrenDll)]
+		internal static extern IntPtr wrenSetSlotNewForeign(IntPtr vm, int slot, int classSlot, IntPtr size);
+
+		
+		/// <summary>
+		/// Reads a foreign object from [slot] and returns a pointer to the foreign data
+		/// stored with it.
+		///
+		/// It is an error to call this if the slot does not contain an instance of a
+		/// foreign class.
 		/// </summary>
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot to get</param>
 		[DllImport(WrenDll)]
-		internal static extern IntPtr wrenSetSlotNewForeign(IntPtr vm, int slot);
+		internal static extern IntPtr wrenGetSlotForeign(IntPtr vm, int slot);
 
 		/// <summary>
 		/// Stores the string <paramref name="text"/> in <paramref name="slot"/>

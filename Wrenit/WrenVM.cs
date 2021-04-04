@@ -12,6 +12,10 @@ namespace Wrenit
 		/// </summary>
 		private static readonly Dictionary<IntPtr, WeakReference<WrenVm>> VmList = new Dictionary<IntPtr, WeakReference<WrenVm>>();
 
+		private readonly Dictionary<IntPtr, WrenForeignObject> _foreignObjects = new Dictionary<IntPtr, WrenForeignObject>();
+		private readonly Queue<IntPtr> _unusedForeignIds = new Queue<IntPtr>();
+		private int _lastForeignId = 0;
+
 		/// <summary>
 		/// pointer to c vm
 		/// </summary>
@@ -240,7 +244,7 @@ namespace Wrenit
 				return new InterlopWrenForeignClassMethods()
 				{
 					AllocateFn = @class.Allocator.MethodPtr,
-					FinalizeFn = Marshal.GetFunctionPointerForDelegate(@class.Finalizer),
+					FinalizeFn = @class.Finalizer.MethodPtr,
 				};
 			}
 			return new InterlopWrenForeignClassMethods();
@@ -359,6 +363,38 @@ namespace Wrenit
 		/// <inheritdoc cref="WrenImport.wrenRemoveMapValue"/>
 		public void GetVariable(string module, string name, int slot) => WrenImport.wrenGetVariable(Ptr, module, name, slot);
 
+		/// <inheritdoc cref="WrenImport.wrenSetSlotNewForeign"/>
+		public void SetSlotNewForeign<T>(int slot, int classSlot)
+		{
+			IntPtr id = _unusedForeignIds.Count > 0 ? _unusedForeignIds.Dequeue() : new IntPtr(_lastForeignId++);
+
+			WrenForeignObject wrenForeignObject = new WrenForeignObject<T>(this, id);
+			_foreignObjects.Add(id, wrenForeignObject);
+			IntPtr ptr = WrenImport.wrenSetSlotNewForeign(Ptr, slot, classSlot, new IntPtr(IntPtr.Size * 2));
+			Marshal.WriteIntPtr(ptr, Ptr);
+			Marshal.WriteIntPtr(ptr, IntPtr.Size, id);
+		}
+
+		/// <inheritdoc cref="WrenImport.wrenGetSlotForeign"/>
+		public WrenForeignObject GetSlotForeign(int slot)
+		{
+			IntPtr ptr = WrenImport.wrenGetSlotForeign(Ptr, slot);
+			IntPtr id = Marshal.ReadIntPtr(ptr, IntPtr.Size);
+			if (_foreignObjects.TryGetValue(id, out WrenForeignObject obj) == false) return null;
+			return obj;
+		}
+
+		public WrenForeignObject<T> GetSlotForeign<T>(int slot) => GetSlotForeign(slot) as WrenForeignObject<T>;
+
+		
+		public void FreeForeignObject(IntPtr id)
+		{
+			if (_foreignObjects.ContainsKey(id) == false) return;
+
+			_foreignObjects.Remove(id);
+			_unusedForeignIds.Enqueue(id);
+		}
+		
 		/// <inheritdoc cref="WrenImport.wrenHasVariable"/>
 		public bool HasVariable(IntPtr vm, string module, string name) => WrenImport.wrenHasVariable(Ptr, module, name);
 		
@@ -367,6 +403,7 @@ namespace Wrenit
 
 		/// <inheritdoc cref="WrenImport.wrenAbortFiber"/>
 		public void AbortFiber(int slot) => WrenImport.wrenAbortFiber(Ptr, slot);
+
 		#endregion
 	}
 }
