@@ -30,8 +30,8 @@ System.print(ClassB.One(1,2,3))
 						foreign static Two()
 					}
 
-					foreign class ClassB {
-						foreign One(a,b,c)
+					class ClassB {
+						foreign static One(a,b,c)
 					}
 				",
 				new WrenitClass("ClassA", null, null,
@@ -63,16 +63,10 @@ System.print(ClassB.One(1,2,3))
 
 			config.BindForeignMethodHandler += (WrenVm _, string module, string className, bool isStatic, string signature) =>
 			{
-				if (wrenitModule.Name == module) 
-				{
-					WrenitClass @class = wrenitModule.FindClass(className);
-					if (@class != null)
-					{
-						WrenitMethod method = @class.FindMethod(signature, isStatic);
-						if (method != null) return method.MethodBinding;
-					}
-				}
-				return null;
+				if (wrenitModule.Name != module) return null;
+				WrenitClass @class = wrenitModule.FindClass(className);
+				WrenitMethod method = @class?.FindMethod(signature, isStatic);
+				return method?.MethodBinding;
 			};
 
 			config.BindForeignClassHandler += (WrenVm _, string module, string className) =>

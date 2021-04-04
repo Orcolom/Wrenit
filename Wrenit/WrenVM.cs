@@ -15,17 +15,17 @@ namespace Wrenit
 		/// <summary>
 		/// pointer to c vm
 		/// </summary>
-		private IntPtr _vm;
+		internal IntPtr Ptr;
 
 		/// <summary>
 		/// the used config
 		/// </summary>
-		private WrenConfig _config;
+		private readonly WrenConfig _config;
 
 		/// <summary>
 		/// is the vm currently alive
 		/// </summary>
-		public bool IsAlive => _vm != IntPtr.Zero;
+		public bool IsAlive => Ptr != IntPtr.Zero;
 
 		#region Lifetime
 
@@ -34,8 +34,8 @@ namespace Wrenit
 		/// </summary>
 		public WrenVm()
 		{
-			_vm = WrenImport.wrenNewVM(null);
-			VmList.Add(_vm, new WeakReference<WrenVm>(this));
+			Ptr = WrenImport.wrenNewVM(null);
+			VmList.Add(Ptr, new WeakReference<WrenVm>(this));
 		}
 
 		/// <summary>
@@ -61,16 +61,13 @@ namespace Wrenit
 			if (wrenConfig.BindForeignMethodHandler != null) interlopConfiguration.BindForeignMethodFn = OnWrenBindForeignMethod;
 			if (wrenConfig.BindForeignClassHandler != null) interlopConfiguration.BindForeignClassFn= OnWrenBindForeignClass;
 
-			_vm = WrenImport.wrenNewVM(interlopConfiguration);
-			VmList.Add(_vm, new WeakReference<WrenVm>(this));
+			Ptr = WrenImport.wrenNewVM(interlopConfiguration);
+			VmList.Add(Ptr, new WeakReference<WrenVm>(this));
 		}
 
 		~WrenVm()
 		{
-			VmList.Remove(_vm);
-
-			WrenImport.wrenFreeVM(_vm);
-			_vm = IntPtr.Zero;
+			Free();
 		}
 
 		/// <summary>
@@ -78,14 +75,18 @@ namespace Wrenit
 		/// </summary>
 		public void Dispose()
 		{
+			Free();
+			GC.SuppressFinalize(this);
+		}
+
+		private void Free()
+		{
 			if (IsAlive == false) return;
 			
-			VmList.Remove(_vm);
+			VmList.Remove(Ptr);
 			
-			WrenImport.wrenFreeVM(_vm);
-			_vm = IntPtr.Zero;
-
-			GC.SuppressFinalize(this);
+			WrenImport.wrenFreeVM(Ptr);
+			Ptr = IntPtr.Zero;
 		}
 
 		/// <summary>
@@ -102,16 +103,40 @@ namespace Wrenit
 
 		#endregion
 
+		#region Run
+
 		/// <inheritdoc cref="WrenImport.wrenInterpret(IntPtr,string,string)"/>
 		public WrenInterpretResult Interpret(string module, string source)
 		{
 			if (IsAlive == false)
 				throw new ObjectDisposedException("Tried to Interpret module in a disposed VM");
 
-			WrenInterpretResult error = WrenImport.wrenInterpret(_vm, module, source);
+			WrenInterpretResult error = WrenImport.wrenInterpret(Ptr, module, source);
 			return error;
 		}
+		
+		/// <inheritdoc cref="WrenImport.wrenMakeCallHandle(IntPtr,string)"/>
+		public WrenSignatureHandle MakeCallHandle(string signature)
+		{
+			IntPtr handlePtr = WrenImport.wrenMakeCallHandle(Ptr, signature);
+			WrenSignatureHandle handle =	new WrenSignatureHandle(this, handlePtr);
+			return handle;
+		}
 
+		/// <inheritdoc cref="WrenImport.wrenCall(IntPtr,IntPtr)"/>
+		public WrenInterpretResult Call(WrenSignatureHandle handle)
+		{
+			return WrenImport.wrenCall(Ptr, handle.Ptr);
+		}
+
+		/// <inheritdoc cref="WrenImport.wrenReleaseHandle(IntPtr,IntPtr)"/>
+		public void ReleaseHandle(WrenHandle handle)
+		{
+			handle?.Dispose();
+		}
+
+		#endregion
+		
 		#region Bindings
 
 		/// <inheritdoc cref="WrenWriteFn"/>
@@ -158,7 +183,7 @@ namespace Wrenit
 			UIntPtr size = new UIntPtr((uint)(resolved.Length + 1) * (uint)IntPtr.Size);
 
 			// 2. create pointer in wren managed memory 
-			IntPtr ptr = WrenImport.wrenReallocate(_vm, IntPtr.Zero, UIntPtr.Zero, size);
+			IntPtr ptr = WrenImport.wrenReallocate(Ptr, IntPtr.Zero, UIntPtr.Zero, size);
 
 			// 3. copy char* string over
 			unsafe
@@ -236,15 +261,112 @@ namespace Wrenit
 		}
 
 		#endregion
+		
+		#region Slots
 
-		#region
+		/// <inheritdoc cref="WrenImport.wrenGetSlotCount(IntPtr)"/>
+		public int GetSlotCount() => WrenImport.wrenGetSlotCount(Ptr);
 
-		/// <inheritdoc cref="WrenImport.wrenGetSlotType(IntPtr,int)"/>
-		public WrenValueType GetSlotType(int slot)
+		/// <inheritdoc cref="WrenImport.wrenEnsureSlots"/>
+		public void EnsureSlots(int slots) => WrenImport.wrenEnsureSlots(Ptr, slots);
+
+		/// <inheritdoc cref="WrenImport.wrenGetSlotType"/>
+		public WrenValueType GetSlotType(int slot) => WrenImport.wrenGetSlotType(Ptr, slot);
+
+		/// <inheritdoc cref="WrenImport.wrenGetSlotBool"/>
+		public bool GetSlotBool(int slot) => WrenImport.wrenGetSlotBool(Ptr, slot);
+
+		/// <inheritdoc cref="WrenImport.wrenSetSlotBool"/>
+		public void SetSlotBool(int slot, bool value) => WrenImport.wrenSetSlotBool(Ptr, slot, value);
+
+		/// <inheritdoc cref="WrenImport.wrenGetSlotBytes"/>
+		public byte[] GetSlotBytes(int slot)
 		{
-			return WrenImport.wrenGetSlotType(_vm, slot);
+			IntPtr arrayPtr = WrenImport.wrenGetSlotBytes(Ptr, slot, out int length);
+			byte[] managedArray = new byte[length];
+			Marshal.Copy(arrayPtr, managedArray, 0, length);
+			return managedArray;
 		}
 
+		/// <inheritdoc cref="WrenImport.wrenSetSlotBytes"/>
+		public void SetSlotBytes(int slot, byte[] bytes)
+		{
+			IntPtr arrayPtr = Marshal.AllocHGlobal(bytes.Length);
+			Marshal.Copy(bytes, 0, arrayPtr, bytes.Length);
+			WrenImport.wrenSetSlotBytes(Ptr, slot, arrayPtr, new UIntPtr((uint)bytes.Length));
+			Marshal.FreeHGlobal(arrayPtr);
+		}
+
+		/// <inheritdoc cref="WrenImport.wrenGetSlotDouble"/>
+		public double GetSlotDouble(int slot) => WrenImport.wrenGetSlotDouble(Ptr, slot);
+
+		/// <inheritdoc cref="WrenImport.wrenSetSlotDouble"/>
+		public void SetSlotDouble(int slot, double value) => WrenImport.wrenSetSlotDouble(Ptr, slot, value);
+
+		/// <inheritdoc cref="WrenImport.wrenGetSlotString"/>
+		public string GetSlotString(int slot) => WrenImport.wrenGetSlotString(Ptr, slot);
+		
+		/// <inheritdoc cref="WrenImport.wrenGetSlotString"/>
+		public void SetSlotString(int slot, string value) => WrenImport.wrenSetSlotString(Ptr, slot, value);
+
+		/// <inheritdoc cref="WrenImport.wrenSetSlotNull"/>
+		public void SetSlotNull(int slot) => WrenImport.wrenSetSlotNull(Ptr, slot);
+
+		/// <inheritdoc cref="WrenImport.wrenGetSlotHandle"/>
+		public WrenHandle GetSlotHandle(int slot)
+		{
+			IntPtr handlePtr = WrenImport.wrenGetSlotHandle(Ptr, slot);
+			return new WrenHandle(this, handlePtr);
+		}
+
+		/// <inheritdoc cref="WrenImport.wrenSetSlotHandle"/>
+		public void SetSlotHandle(int slot, WrenHandle handle) => WrenImport.wrenSetSlotHandle(Ptr, slot, handle.Ptr);
+
+		/// <inheritdoc cref="WrenImport.wrenSetSlotNewList"/>
+		public void SetSlotNewList(int slot) => WrenImport.wrenSetSlotNewList(Ptr, slot);
+
+		/// <inheritdoc cref="WrenImport.wrenGetListCount"/>
+		public int GetListCount(int slot) => WrenImport.wrenGetListCount(Ptr, slot);
+
+		/// <inheritdoc cref="WrenImport.wrenSetListElement"/>
+		public void SetListElement(int listSlot, int index, int elementSlot) =>
+			WrenImport.wrenSetListElement(Ptr, listSlot, index, elementSlot);
+
+		/// <inheritdoc cref="WrenImport.wrenGetListElement"/>
+		public void GetListElement(int listSlot, int index, int elementSlot) => WrenImport.wrenGetListElement(Ptr, listSlot, index, elementSlot);
+
+		/// <inheritdoc cref="WrenImport.wrenInsertInList"/>
+		public void InsertInList(int listSlot, int index, int elementSlot) => WrenImport.wrenInsertInList(Ptr, listSlot, index, elementSlot);
+
+		/// <inheritdoc cref="WrenImport.wrenSetSlotNewMap"/>
+		public void SetSlotNewMap(int slot) => WrenImport.wrenSetSlotNewMap(Ptr, slot);
+		
+		/// <inheritdoc cref="WrenImport.wrenGetMapCount"/>
+		public int GetMapCount(int slot) => WrenImport.wrenGetMapCount(Ptr, slot);
+		
+		/// <inheritdoc cref="WrenImport.wrenGetMapContainsKey"/>
+		public bool GetMapContainsKey(int mapSlot, int keySlot) => WrenImport.wrenGetMapContainsKey(Ptr, mapSlot, keySlot);
+
+		/// <inheritdoc cref="WrenImport.wrenGetMapValue"/>
+		public void GetMapValue(int mapSlot, int keySlot, int valueSlot) => WrenImport.wrenGetMapValue(Ptr, mapSlot, keySlot, valueSlot);
+
+		/// <inheritdoc cref="WrenImport.wrenSetMapValue"/>
+		public void SetMapValue(int mapSlot, int keySlot, int valueSlot) => WrenImport.wrenSetMapValue(Ptr, mapSlot, keySlot, valueSlot);
+		
+		/// <inheritdoc cref="WrenImport.wrenRemoveMapValue"/>
+		public void RemoveMapValue(int mapSlot, int keySlot, int removedValueSlot) => WrenImport.wrenRemoveMapValue(Ptr, mapSlot, keySlot, removedValueSlot);
+
+		/// <inheritdoc cref="WrenImport.wrenRemoveMapValue"/>
+		public void GetVariable(string module, string name, int slot) => WrenImport.wrenGetVariable(Ptr, module, name, slot);
+
+		/// <inheritdoc cref="WrenImport.wrenHasVariable"/>
+		public bool HasVariable(IntPtr vm, string module, string name) => WrenImport.wrenHasVariable(Ptr, module, name);
+		
+		/// <inheritdoc cref="WrenImport.wrenHasModule"/>
+		public bool HasModule(IntPtr vm, string module) => WrenImport.wrenHasModule(Ptr, module);
+
+		/// <inheritdoc cref="WrenImport.wrenAbortFiber"/>
+		public void AbortFiber(int slot) => WrenImport.wrenAbortFiber(Ptr, slot);
 		#endregion
 	}
 }
