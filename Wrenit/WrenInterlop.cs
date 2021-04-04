@@ -1,0 +1,420 @@
+﻿using System;
+using System.Runtime.InteropServices;
+
+// all code related to and only accessible for pinvoke
+namespace Wrenit.Interlop
+{
+	internal static class WrenImport
+	{
+		// Helper Info:
+		// | c			          | c#			 | remark
+		// |------------------|----------|------------- ----  ---  --   -
+		// | size_t           | UIntPtr  | 
+		// | char*            | string   | [MarshalAs(UnmanagedType.LPStr)]
+		// | bool             | bool     | [MarshalAs(UnmanagedType.I1)]
+		// | <struct>*        | <class>  | 
+		// | <struct>         | <class>  |
+		// | return <struct>  | <struct> | when struct needs to be returned all internals need to be a bittable  
+		// | <any>*           | IntPtr   |
+		// |				          |					 |
+		
+		#if DEBUG
+		private const string WrenDll = "wren_d.dll";
+		#else
+		private const string WrenDll = "wren.dll";
+		#endif
+
+		public const int PtrSize = 8;
+
+		#region Imports
+
+		/// <summary>
+		/// Get default initialized WrenConfig data
+		/// </summary>
+		/// <param name="configuration">interlop config filled with the default values</param>
+		[DllImport(WrenDll)]
+		internal static extern void wrenInitConfiguration([Out] InterlopWrenConfiguration configuration);
+
+		/// <summary>
+		/// Creates a new Wren virtual machine using the given <paramref name="configuration"/>.
+		/// If <paramref name="configuration"/> is `null`, uses a default configuration created by <see cref="wrenInitConfiguration"/>.
+		/// </summary>
+		/// <param name="configuration">config with bindings and settings</param>
+		/// <returns>pointer to c vm</returns>
+		[DllImport(WrenDll)]
+		internal static extern IntPtr wrenNewVM(InterlopWrenConfiguration configuration);
+
+		/// <summary>
+		/// Disposes of all resources is use by <paramref name="vm"/>,
+		/// which was previously created by a call to <see cref="wrenNewVM"/>.
+		/// </summary>
+		/// <param name="vm">pointer of the vm to free</param>
+		[DllImport(WrenDll)]
+		internal static extern void wrenFreeVM(IntPtr vm);
+
+		/// <summary>
+		/// Immediately run the garbage collector to free unused memory.
+		/// </summary>
+		/// <param name="vm">pointer to c vm</param>
+		[DllImport(WrenDll)]
+		internal static extern void wrenCollectGarbage(IntPtr vm);
+
+		/// <summary>
+		/// A generic allocation function that handles all explicit memory management.
+		///	
+		/// <para>
+		///		It's used like so:
+		/// </para>
+		/// <para>
+		///		- To allocate new memory, <paramref name="memory"/> is null and <paramref name="oldSize"/> is zero.
+		///			It should return the allocated memory or null on failure.
+		/// </para>
+		/// <para>
+		///		- To attempt to grow an existing allocation, <paramref name="memory"/> is the memory,
+		///			<paramref name="oldSize"/> is its previous size, and <paramref name="newSize"/> is the desired size.
+		///			It should return <paramref name="memory"/> if it was able to grow it in place, or a new pointer if it had to move it.
+		/// </para>
+		/// <para>
+		///		- To shrink memory, <paramref name="memory"/>, <paramref name="oldSize"/>,
+		///			and <paramref name="newSize"/> are the same as above but it will always return <paramref name="memory"/>.
+		/// </para>
+		/// <para>
+		///		- To free memory, <paramref name="memory"/> will be the memory to free
+		///			and <paramref name="newSize"/> and <paramref name="oldSize"/> will be zero. It should return null.
+		/// </para>
+		/// 
+		/// </summary>
+		/// <param name="vm">pointer to c vm</param>
+		/// <param name="memory">pointer to the memory</param>
+		/// <param name="oldSize">old size as <see cref="UIntPtr"/></param>
+		/// <param name="newSize">old size as <see cref="UIntPtr"/></param>
+		/// <returns>pointer depending on input</returns>
+		[DllImport(WrenDll)]
+		internal static extern IntPtr wrenReallocate(IntPtr vm, IntPtr memory, UIntPtr oldSize, UIntPtr newSize);
+
+		/// <summary>
+		/// Runs <paramref name="source"/>, a string of Wren source code in a new fiber in <paramref name="vm"/> in the context of resolved <paramref name="module"/>.
+		/// </summary>
+		/// <param name="vm">pointer to c vm</param>
+		/// <param name="module">module name</param>
+		/// <param name="source">module source</param>
+		/// <returns>interpret result</returns>
+		[DllImport(WrenDll)]
+		internal static extern WrenInterpretResult wrenInterpret(IntPtr vm, string module, string source);
+
+		/// <summary>
+		/// Gets the type of the object in <paramref name="slot"/>
+		/// </summary>
+		/// <param name="vm">pointer to c vm</param>
+		/// <param name="slot">slot index</param>
+		/// <returns>resolved type</returns>
+		[DllImport(WrenDll)]
+		internal static extern WrenValueType wrenGetSlotType(IntPtr vm, int slot);
+
+		#endregion
+	}
+
+	#region Types/Delegates
+
+	/// <summary>
+	/// display text to the user
+	/// </summary>
+	/// <param name="vm">pointer to c vm</param>
+	/// <param name="text">text to display</param>
+	internal delegate void WrenWriteFn(IntPtr vm,
+		[MarshalAs(UnmanagedType.LPStr)] string text);
+
+	/// <summary>
+	/// Reports an error to the user.
+	///
+	/// <para>
+	/// 	An error detected during compile time is reported by calling this once with
+	/// 	<paramref name="type"/> <see cref="F:WrenErrorType.CompileError"/>,
+	///		the resolved name of the <paramref name="module"/> and <paramref name="line"/>
+	/// 	where the error occurs, and the compiler's error <paramref name="message"/>.
+	/// </para>
+	///
+	/// <para>
+	/// 	A runtime error is reported by calling this once with <paramref name="type"/> <see cref="F:WrenErrorType.RuntimeError"/>,
+	/// 	no <paramref name="module"/> or <paramref name="line"/>, and the runtime error's <paramref name="message"/>.
+	/// 	After that, a series of <paramref name="type"/> <see cref="F:WrenErrorType.StackTrace"/> calls are
+	/// 	made for each line in the stack trace. Each of those has the resolved
+	/// 	<paramref name="module"/> and <paramref name="line"/> where the method or function is defined
+	///		and <paramref name="message"/> is the name of the method or function.
+	/// </para>
+	/// </summary>
+	/// <param name="vm">pointer to c vm</param>
+	/// <param name="type">error type</param>
+	/// <param name="module">module name</param>
+	/// <param name="line">line position</param>
+	/// <param name="message">the message</param>
+	internal delegate void WrenErrorFn(IntPtr vm,
+		WrenErrorType type,
+		[MarshalAs(UnmanagedType.LPStr)] string module,
+		int line,
+		[MarshalAs(UnmanagedType.LPStr)] string message);
+
+	/// <summary>
+	///	<para>
+	///		The callback Wren uses to resolve a module name.
+	/// </para>
+	///
+	/// <para>
+	/// 	Some host applications may wish to support "relative" imports, where the
+	/// 	meaning of an import string depends on the module that contains it. To
+	/// 	support that without baking any policy into Wren itself, the VM gives the
+	/// 	host a chance to resolve an import string.
+	/// </para>
+	///
+	/// <para>
+	/// 	Before an import is loaded, it calls this, passing in the name of the
+	/// 	module that contains the import and the import string. The host app can
+	/// 	look at both of those and produce a new "canonical" string that uniquely
+	/// 	identifies the module. This string is then used as the name of the module
+	/// 	going forward. It is what is passed to <see cref="F:InterlopWrenConfiguration.LoadModuleFn"/>, how duplicate
+	/// 	imports of the same module are detected, and how the module is reported in
+	/// 	stack traces.
+	/// </para>
+	///
+	/// <para>
+	/// 	If you leave this function null, then the original import string is
+	/// 	treated as the resolved string.
+	/// </para>
+	///
+	/// <para>
+	/// 	If an import cannot be resolved by the embedder, it should return null and
+	/// 	Wren will report that as a runtime error.
+	/// </para>
+	///
+	/// <para>
+	/// 	Wren will take ownership of the string you return and free it for you, so
+	/// 	it should be allocated using the same allocation function you provide above,
+	///		or accessible via <see cref="WrenImport.wrenReallocate"/>
+	/// </para>
+	/// 
+	/// </summary>
+	internal delegate IntPtr WrenResolveModuleFn(IntPtr vm,
+		[MarshalAs(UnmanagedType.LPStr)] string importer,
+		IntPtr name);
+
+	/// <summary>
+	/// Loads and returns the source code for the module <param name="name"/>
+	/// </summary>
+	/// <param name="vm">pointer to the c vm</param>
+	/// <param name="name">name of the module</param>
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	internal delegate InterlopWrenLoadModuleResult WrenLoadModuleFn(IntPtr vm,
+		[MarshalAs(UnmanagedType.LPStr)] string name);
+
+	/// <summary>
+	/// Called after <see cref="F:InterlopWrenConfiguration.LoadModuleFn"/> is called for module <param name="name"/>.
+	/// The original returned result is handed back to you in this callback, so that you can free memory if appropriate.
+	/// </summary>
+	/// <param name="vm">pinter to the c vm</param>
+	/// <param name="name">name of the module</param>
+	/// <param name="result">result created by <see cref="F:InterlopWrenConfiguration.LoadModuleFn"/></param>
+	internal delegate void WrenLoadModuleCompleteFn(IntPtr vm,
+		[MarshalAs(UnmanagedType.LPStr)] string name,
+		InterlopWrenLoadModuleResult result);
+
+	/// <summary>
+	/// Returns a pointer to a foreign method on <paramref name="className"/> in <paramref name="module"/> with <paramref name="signature"/>.
+	/// </summary>
+	/// <param name="vm">pointer to c vm</param>
+	/// <param name="module">module name</param>
+	/// <param name="className">class name</param>
+	/// <param name="isStatic">is function static</param>
+	/// <param name="signature">function signatur</param>
+	internal delegate IntPtr WrenBindForeignMethodFn(IntPtr vm,
+		[MarshalAs(UnmanagedType.LPStr)] string module,
+		[MarshalAs(UnmanagedType.LPStr)] string className,
+		[MarshalAs(UnmanagedType.I1)] bool isStatic,
+		[MarshalAs(UnmanagedType.LPStr)] string signature);
+
+	/// <summary>
+	/// Returns a pair of pointers to the foreign methods used to allocate and
+	/// finalize the data for instances of <paramref name="className"/> in resolved <paramref name="module"/>.
+	/// </summary>
+	/// <param name="vm">pointer to c vm</param>
+	/// <param name="module">module name</param>
+	/// <param name="className">class name</param>
+	internal delegate InterlopWrenForeignClassMethods WrenBindForeignClassFn(IntPtr vm,
+		[MarshalAs(UnmanagedType.LPStr)] string module,
+		[MarshalAs(UnmanagedType.LPStr)] string className);
+
+	/// <summary>
+	/// A function callable from Wren code, but implemented in C#.
+	/// </summary>
+	/// <param name="vm"></param>
+	internal delegate void InterlopWrenForeignMethodFn(IntPtr vm);
+	
+	internal struct InterlopWrenForeignClassMethods
+	{
+		/// <summary>
+		/// The callback invoked when the foreign object is created.
+		///
+		/// This must be provided. Inside the body of this,
+		/// it must call <see cref="WrenImport.wrenSetSlotNewForeign()"/> exactly once.
+		/// </summary>
+		public IntPtr AllocateFn;
+
+		/// <summary>
+		/// The callback invoked when the garbage collector is about to collect a foreign object's memory.
+		/// This may be `null` if the foreign class does not need to finalize.
+		/// </summary>
+		public IntPtr FinalizeFn;
+	}
+
+	/// <summary>
+	/// result from <see cref="F:InterlopWrenConfiguration.LoadModuleFn"/> call
+	/// </summary>
+	internal struct InterlopWrenLoadModuleResult
+	{
+		/// <summary>
+		/// Source code of the module
+		/// </summary>
+		public IntPtr Source;
+		
+		/// <summary>
+		/// an optional callback that will be called once Wren is done with the result.
+		/// </summary>
+		public IntPtr OnComplete;
+
+		public IntPtr UserData;
+	}
+
+	/// <summary>
+	/// interlop struct for WrenConfiguration
+	/// </summary>
+	[StructLayout(LayoutKind.Sequential)]
+	internal class InterlopWrenConfiguration
+	{
+		/// <summary>
+		///		The callback Wren will use to allocate, reallocate, and deallocate memory.
+		///		If `null`, defaults to a built-in function that uses `realloc` and `free`.
+		///
+		///		<remarks>
+		///			Wrenit doesn't give a custom Reallocate function. here for struct layout
+		///		</remarks>
+		/// </summary>
+		public IntPtr ReallocateFn;
+
+		/// <inheritdoc cref="WrenResolveModuleFn"/>
+		[MarshalAs(UnmanagedType.FunctionPtr)]
+		public WrenResolveModuleFn ResolveModuleFn;
+
+		/// <summary>
+		/// The callback Wren uses to load a module.
+		///
+		/// <para>
+		/// 	Since Wren does not talk directly to the file system, it relies on the
+		/// 	embedder to physically locate and read the source code for a module. The
+		/// 	first time an import appears, Wren will call this and pass in the name of
+		/// 	the module being imported. The VM should return the source code for that
+		/// 	module. Memory for the source should be allocated using <see cref="ReallocateFn"/> and
+		/// 	Wren will take ownership over it.
+		/// </para>
+		///
+		/// <para>
+		/// 	This will only be called once for any given module name. Wren caches the
+		/// 	result internally so subsequent imports of the same module will use the
+		/// 	previous source and not call this.
+		/// </para>
+		///
+		/// <para>
+		/// 	If a module with the given name could not be found by the embedder, it
+		/// 	should return NULL and Wren will report that as a runtime error.
+		/// </para>
+		/// </summary>
+		[MarshalAs(UnmanagedType.FunctionPtr)]
+		public WrenLoadModuleFn LoadModuleFn;
+
+		/// <summary>
+		///	The callback Wren uses to find a foreign method and bind it to a class.
+		///
+		/// <para>
+		/// 	When a foreign method is declared in a class, this will be called with the
+		/// 	foreign method's module, class, and signature when the class body is
+		/// 	executed. It should return a pointer to the foreign function that will be
+		/// 	bound to that method.
+		/// </para>
+		///
+		/// <para>
+		/// 	If the foreign function could not be found, this should return null and
+		/// 	Wren will report it as runtime error.
+		/// </para>
+		/// </summary>
+		[MarshalAs(UnmanagedType.FunctionPtr)]
+		public WrenBindForeignMethodFn BindForeignMethodFn;
+
+		/// <summary>
+		/// The callback Wren uses to find a foreign class and get its foreign methods.
+		///
+		/// <para>
+		/// 	When a foreign class is declared, this will be called with the class's
+		/// 	module and name when the class body is executed. It should return the
+		/// 	foreign functions uses to allocate and (optionally) finalize the bytes
+		/// 	stored in the foreign object when an instance is created.
+		/// </para>
+		/// </summary>
+		[MarshalAs(UnmanagedType.FunctionPtr)]
+		public WrenBindForeignClassFn BindForeignClassFn;
+
+		/// <inheritdoc cref="WrenWriteFn"/>
+		[MarshalAs(UnmanagedType.FunctionPtr)]
+		public WrenWriteFn WriteFn;
+
+		/// <inheritdoc cref="WrenErrorFn"/>
+		[MarshalAs(UnmanagedType.FunctionPtr)]
+		public WrenErrorFn ErrorFn;
+
+		/// <summary>
+		///	The number of bytes Wren will allocate before triggering the first garbage collection.
+		///
+		/// If zero, defaults to 10MB.
+		/// </summary>
+		public UIntPtr InitialHeapSize;
+
+		/// <summary>
+		/// After a collection occurs, the threshold for the next collection is
+		/// determined based on the number of bytes remaining in use. This allows Wren
+		/// to shrink its memory usage automatically after reclaiming a large amount
+		/// of memory.
+		///
+		/// This can be used to ensure that the heap does not get too small, which can
+		/// in turn lead to a large number of collections afterwards as the heap grows
+		/// back to a usable size.
+		///
+		/// If zero, defaults to 1MB.
+		/// </summary>
+		public UIntPtr MinHeapSize;
+
+		/// <summary>
+		/// Wren will resize the heap automatically as the number of bytes
+		/// remaining in use after a collection changes. This number determines the
+		/// amount of additional memory Wren will use after a collection, as a
+		/// percentage of the current heap size.
+		///
+		/// For example, say that this is 50. After a garbage collection, when there
+		/// are 400 bytes of memory still in use, the next collection will be triggered
+		/// after a total of 600 bytes are allocated (including the 400 already in
+		/// use.)
+		///
+		/// Setting this to a smaller number wastes less memory, but triggers more
+		/// frequent garbage collections.
+		///
+		/// If zero, defaults to 50.
+		/// </summary>
+		public int HeapGrowthPercent;
+
+		/// <summary>
+		/// User-defined data associated with the VM.
+		/// <remarks>
+		///		Wrenit doesnt give the option to provide this. here for struct layout
+		/// </remarks>
+		/// </summary>
+		public IntPtr UserData;
+	}
+
+	#endregion
+}

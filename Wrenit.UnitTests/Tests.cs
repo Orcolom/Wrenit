@@ -9,7 +9,7 @@ namespace Wrenit.UnitTests
 		[Test]
 		public void VmLifetime()
 		{
-			WrenitVM vm = new WrenitVM();
+			WrenVm vm = new WrenVm();
 			Assert.True(vm.IsAlive);
 			vm.Dispose();
 			Assert.False(vm.IsAlive);
@@ -18,72 +18,71 @@ namespace Wrenit.UnitTests
 		[Test]
 		public void VmWrite()
 		{
-			WrenitConfig config = WrenitConfig.GetDefaults();
+			WrenConfig config = WrenConfig.GetDefaults();
 			string msg = "abc";
-
 			
-			config.WriteHandler += (WrenitVM _, string text) =>
+			config.WriteHandler += (_, text) =>
 			{
 				Assert.AreEqual(text, msg);
 			};
 
-			config.ErrorHandler += (WrenitVM vm, WrenitResult result, string module, int line, string message) =>
+			config.ErrorHandler += (vm, result, module, line, message) =>
 			{
 				Assert.IsTrue(false, "script execution failed");
 			};
 
-			new WrenitVM(config).Interpret("m", $"System.write(\"{msg}\")");
+			new WrenVm(config).Interpret("m", $"System.write(\"{msg}\")");
 		}
 
 		[Test]
 		public void VmCompileError()
 		{
-			WrenitConfig config = WrenitConfig.GetDefaults();
+			WrenConfig config = WrenConfig.GetDefaults();
 			string msg = ";";
 
-			config.WriteHandler += (WrenitVM _, string text) =>
+			config.WriteHandler += (_, text) =>
 			{
 				Assert.IsTrue(false, "should not be hit");
 			};
 
-			config.ErrorHandler = (WrenitVM vm, WrenitResult result, string module, int line, string message) =>
+			config.ErrorHandler = (vm, result, module, line, message) =>
 			{
-				Assert.AreEqual(WrenitResult.CompileError, result);
+				Assert.AreEqual(WrenErrorType.CompileError, result);
 				Assert.IsTrue(message.Contains(msg));
 			};
 			
-			new WrenitVM(config).Interpret("m", $"System.write(\"abc\"){msg}");
+			new WrenVm(config).Interpret("m", $"System.write(\"abc\"){msg}");
 		}
 
 		[Test]
 		public void VmRuntimeError()
 		{
-			WrenitConfig config = WrenitConfig.GetDefaults();
+			WrenConfig config = WrenConfig.GetDefaults();
 			string msg = "writ";
 
-			config.WriteHandler += (WrenitVM _, string text) =>
+			config.WriteHandler += (_, text) =>
 			{
 				Assert.IsTrue(false, "should not be hit");
 			};
 
 			bool first = true;
-			config.ErrorHandler = (WrenitVM vm, WrenitResult result, string module, int line, string message) =>
+			config.ErrorHandler = (vm, result, module, line, message) =>
 			{
 				if (first)
 				{
-					Assert.AreEqual(WrenitResult.RuntimeError, result);
+					Assert.AreEqual(WrenErrorType.RuntimeError, result);
 					Assert.IsTrue(message.Contains(msg));
 					Assert.AreEqual(-1, line);
 					first = false;
 				}
 				else
 				{
-					Assert.AreEqual(WrenitResult.StackTrace, result);
+					Assert.AreEqual(WrenErrorType.StackTrace, result);
 					Assert.AreEqual(1, line);
 				}
 			};
 
-			new WrenitVM(config).Interpret("m", $"System.{msg}(\"abc\")");
+			new WrenVm(config).Interpret("m", $"System.{msg}(\"abc\")");
 		}
 	}
 }

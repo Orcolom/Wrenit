@@ -43,11 +43,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="WrenitModule.cs" />
-    <Compile Include="WrenImports.cs" />
+    <Compile Include="Wren.cs" />
+    <Compile Include="WrenitBuilder.cs" />
+    <Compile Include="WrenInterlop.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="WrenitConfig.cs" />
-    <Compile Include="WrenitVM.cs" />
+    <Compile Include="WrenConfig.cs" />
+    <Compile Include="WrenVM.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\..\Wren\lib\wren.dll">
