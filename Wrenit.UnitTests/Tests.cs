@@ -1,7 +1,7 @@
 ﻿using System;
 using NUnit.Framework;
 
-namespace Wrenit.UnitTests
+namespace Wren.it.UnitTests
 {
 	[TestFixture]
 	public class Tests

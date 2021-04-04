@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Wrenit.Interlop;
+using Wren.it.Interlop;
 
-namespace Wrenit
+namespace Wren.it
 {
 	public class WrenVm : IDisposable
 	{
@@ -31,13 +31,16 @@ namespace Wrenit
 		/// </summary>
 		public bool IsAlive => Ptr != IntPtr.Zero;
 
+		public static int GetVersion() => WrenImport.wrenGetVersionNumber();
+		
 		#region Lifetime
-
+		
 		/// <summary>
 		/// create a new vm with all default values 
 		/// </summary>
 		public WrenVm()
 		{
+			Wrenit.Initialize();
 			Ptr = WrenImport.wrenNewVM(null);
 			VmList.Add(Ptr, new WeakReference<WrenVm>(this));
 		}
@@ -48,6 +51,7 @@ namespace Wrenit
 		/// <param name="wrenConfig"></param>
 		public WrenVm(WrenConfig wrenConfig)
 		{
+			Wrenit.Initialize();
 			_config = wrenConfig;
 
 			InterlopWrenConfiguration interlopConfiguration = new InterlopWrenConfiguration

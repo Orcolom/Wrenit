@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 
 // all code related to and only accessible for pinvoke
-namespace Wrenit.Interlop
+namespace Wren.it.Interlop
 {
 	internal static class WrenImport
 	{
@@ -18,21 +18,21 @@ namespace Wrenit.Interlop
 		// | <any>*           | IntPtr   |
 		// |				          |					 |
 
-		#if DEBUG
-		private const string WrenDll = "wren_d.dll";
-		#else
-		private const string WrenDll = "wren.dll";
-		#endif
-
-		public const int PtrSize = 8;
 
 		#region Imports
 
+		
+		/// <summary>
+		/// Get wren version
+		/// </summary>
+		[DllImport(Wrenit.DllName)]
+		internal static extern int wrenGetVersionNumber();
+		
 		/// <summary>
 		/// Get default initialized WrenConfig data
 		/// </summary>
 		/// <param name="configuration">interlop config filled with the default values</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenInitConfiguration([Out] InterlopWrenConfiguration configuration);
 
 		/// <summary>
@@ -41,7 +41,7 @@ namespace Wrenit.Interlop
 		/// </summary>
 		/// <param name="configuration">config with bindings and settings</param>
 		/// <returns>pointer to c vm</returns>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern IntPtr wrenNewVM(InterlopWrenConfiguration configuration);
 
 		/// <summary>
@@ -49,14 +49,14 @@ namespace Wrenit.Interlop
 		/// which was previously created by a call to <see cref="wrenNewVM"/>.
 		/// </summary>
 		/// <param name="vm">pointer of the vm to free</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenFreeVM(IntPtr vm);
 
 		/// <summary>
 		/// Immediately run the garbage collector to free unused memory.
 		/// </summary>
 		/// <param name="vm">pointer to c vm</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenCollectGarbage(IntPtr vm);
 
 		/// <summary>
@@ -89,7 +89,7 @@ namespace Wrenit.Interlop
 		/// <param name="oldSize">old size as <see cref="UIntPtr"/></param>
 		/// <param name="newSize">old size as <see cref="UIntPtr"/></param>
 		/// <returns>pointer depending on input</returns>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern IntPtr wrenReallocate(IntPtr vm, IntPtr memory, UIntPtr oldSize, UIntPtr newSize);
 
 		/// <summary>
@@ -99,7 +99,7 @@ namespace Wrenit.Interlop
 		/// <param name="module">module name</param>
 		/// <param name="source">module source</param>
 		/// <returns>interpret result</returns>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern WrenInterpretResult wrenInterpret(IntPtr vm, string module, string source);
 
 		/// <summary>
@@ -117,7 +117,7 @@ namespace Wrenit.Interlop
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="signature">method signature</param>
 		/// <returns>pointer to handle</returns>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern IntPtr wrenMakeCallHandle(IntPtr vm, [MarshalAs(UnmanagedType.LPStr)] string signature); 
 
 		/// <summary>
@@ -138,7 +138,7 @@ namespace Wrenit.Interlop
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="method">pointer to c handle</param>
 		/// <returns>interpret result</returns>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern WrenInterpretResult wrenCall(IntPtr vm, IntPtr method); 
 		
 		/// <summary>
@@ -147,7 +147,7 @@ namespace Wrenit.Interlop
 		/// </summary>
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="handle"></param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenReleaseHandle(IntPtr vm, IntPtr handle);
 
 		/// <summary>
@@ -155,7 +155,7 @@ namespace Wrenit.Interlop
 		/// </summary>
 		/// <param name="vm">pointer to c vm</param>
 		/// <returns>slot count</returns>		
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern int wrenGetSlotCount(IntPtr vm);
 
 		/// <summary>
@@ -169,7 +169,7 @@ namespace Wrenit.Interlop
 		/// <param name="vm"></param>
 		/// <param name="slots"></param>
 		/// <returns></returns>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenEnsureSlots(IntPtr vm, int slots);
 
 		/// <summary>
@@ -178,7 +178,7 @@ namespace Wrenit.Interlop
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot index</param>
 		/// <returns>resolved type</returns>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern WrenValueType wrenGetSlotType(IntPtr vm, int slot);
 
 		/// <summary>
@@ -187,7 +187,7 @@ namespace Wrenit.Interlop
 		/// </summary>
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot to get</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		[return: MarshalAs(UnmanagedType.I1)]
 		internal static extern bool wrenGetSlotBool(IntPtr vm, int slot);
 
@@ -197,7 +197,7 @@ namespace Wrenit.Interlop
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot to store int</param>
 		/// <param name="value">value to store</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenSetSlotBool(IntPtr vm, int slot, bool value);
 
 		/// <summary>
@@ -219,7 +219,7 @@ namespace Wrenit.Interlop
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot to get</param>
 		/// <param name="length">number of bytes</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern IntPtr wrenGetSlotBytes(IntPtr vm, int slot, [Out] out int length);
 		
 		/// <summary>
@@ -232,7 +232,7 @@ namespace Wrenit.Interlop
 		/// <param name="slot">slot to store in</param>
 		/// <param name="bytes">bytes to store</param>
 		/// <param name="length">bytes length</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenSetSlotBytes(IntPtr vm, int slot, IntPtr bytes, UIntPtr length);
 		
 		/// <summary>
@@ -242,7 +242,7 @@ namespace Wrenit.Interlop
 		/// </summary>
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot to get</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern double wrenGetSlotDouble(IntPtr vm, int slot);
 
 		/// <summary>
@@ -251,7 +251,7 @@ namespace Wrenit.Interlop
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot to store in</param>
 		/// <param name="value">value to store</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenSetSlotDouble(IntPtr vm, int slot, double value);
 		
 		/// <summary>
@@ -271,7 +271,7 @@ namespace Wrenit.Interlop
 		/// <param name="slot">slot to get</param>
 		/// <param name="classSlot">slot to store in</param>
 		/// <param name="size">size of foreign data</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern IntPtr wrenSetSlotNewForeign(IntPtr vm, int slot, int classSlot, IntPtr size);
 
 		
@@ -284,7 +284,7 @@ namespace Wrenit.Interlop
 		/// </summary>
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot to get</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern IntPtr wrenGetSlotForeign(IntPtr vm, int slot);
 
 		/// <summary>
@@ -297,7 +297,7 @@ namespace Wrenit.Interlop
 		/// 	should use <see cref="wrenSetSlotBytes"/> instead.
 		/// </para>
 		/// </summary>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenSetSlotString(IntPtr vm, int slot, 
 			[MarshalAs(UnmanagedType.LPStr)] string text);
 
@@ -312,7 +312,7 @@ namespace Wrenit.Interlop
 		/// </summary>
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot to get</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		[return: MarshalAs(UnmanagedType.LPStr)]
 		internal static extern string wrenGetSlotString(IntPtr vm, int slot);
 
@@ -321,7 +321,7 @@ namespace Wrenit.Interlop
 		/// </summary>
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot to store in</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenSetSlotNull(IntPtr vm, int slot);
 		
 		/// <summary>
@@ -332,7 +332,7 @@ namespace Wrenit.Interlop
 		/// </summary>
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot to get</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern IntPtr wrenGetSlotHandle(IntPtr vm, int slot);
 
 
@@ -344,7 +344,7 @@ namespace Wrenit.Interlop
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot to store in</param>
 		/// <param name="handle">pointer of handle to store</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenSetSlotHandle(IntPtr vm, int slot, IntPtr handle);
 
 		/// <summary>
@@ -352,7 +352,7 @@ namespace Wrenit.Interlop
 		/// </summary>
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot to store in</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenSetSlotNewList(IntPtr vm, int slot);
 		
 		/// <summary>
@@ -361,7 +361,7 @@ namespace Wrenit.Interlop
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot get from</param>
 		/// <returns>count of list elements</returns>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern int wrenGetListCount(IntPtr vm, int slot);
 
 		/// <summary>
@@ -372,7 +372,7 @@ namespace Wrenit.Interlop
 		/// <param name="listSlot">slot where the list is</param>
 		/// <param name="index">index in the list</param>
 		/// <param name="elementSlot">slot of value to store in list</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenSetListElement(IntPtr vm, int listSlot, int index, int elementSlot);
 
 		/// <summary>
@@ -382,7 +382,7 @@ namespace Wrenit.Interlop
 		/// <param name="listSlot">slot where the list is</param>
 		/// <param name="index">index in the list</param>
 		/// <param name="elementSlot">slot to store the value in</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenGetListElement(IntPtr vm, int listSlot, int index, int elementSlot);
 
 		/// <summary>
@@ -397,7 +397,7 @@ namespace Wrenit.Interlop
 		/// <param name="listSlot">slot where the list is</param>
 		/// <param name="index">index to store element</param>
 		/// <param name="elementSlot">slot of value to store in list</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenInsertInList(IntPtr vm, int listSlot, int index, int elementSlot);
 
 		/// <summary>
@@ -405,7 +405,7 @@ namespace Wrenit.Interlop
 		/// </summary>
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot to store</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenSetSlotNewMap(IntPtr vm, int slot);
 		
 		/// <summary>
@@ -414,7 +414,7 @@ namespace Wrenit.Interlop
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot to look at</param>
 		/// <returns>count of entries</returns>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern int wrenGetMapCount(IntPtr vm, int slot);
 		
 		/// <summary>
@@ -423,7 +423,7 @@ namespace Wrenit.Interlop
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="mapSlot">slot where the map is</param>
 		/// <param name="keySlot">slot of value to check exists</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		[return: MarshalAs(UnmanagedType.I1)]
 		internal static extern bool wrenGetMapContainsKey(IntPtr vm, int mapSlot, int keySlot);
 
@@ -435,7 +435,7 @@ namespace Wrenit.Interlop
 		/// <param name="mapSlot">slot where the map is</param>
 		/// <param name="keySlot">slot of the key</param>
 		/// <param name="valueSlot">slot to store the value in</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenGetMapValue(IntPtr vm, int mapSlot, int keySlot, int valueSlot);
 		
 		/// <summary>
@@ -446,7 +446,7 @@ namespace Wrenit.Interlop
 		/// <param name="mapSlot">slot where map is</param>
 		/// <param name="keySlot">slot of the key to store in</param>
 		/// <param name="valueSlot">slot of the value to store</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenSetMapValue(IntPtr vm, int mapSlot, int keySlot, int valueSlot);
 		
 		/// <summary>
@@ -458,7 +458,7 @@ namespace Wrenit.Interlop
 		/// <param name="mapSlot">slot where the map is</param>
 		/// <param name="keySlot">slot of the key to remove</param>
 		/// <param name="removedValueSlot">slot to store value that was removed</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenRemoveMapValue(IntPtr vm, int mapSlot, int keySlot, int removedValueSlot);
 
 		/// <summary>
@@ -469,7 +469,7 @@ namespace Wrenit.Interlop
 		/// <param name="module">module to check in</param>
 		/// <param name="name">name to get</param>
 		/// <param name="slot">slot to store in</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenGetVariable(IntPtr vm, 
 			[MarshalAs(UnmanagedType.LPStr)]string module, 
 			[MarshalAs(UnmanagedType.LPStr)]string name, int slot);
@@ -482,7 +482,7 @@ namespace Wrenit.Interlop
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="module">module to check in</param>
 		/// <param name="name">name to check for</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		[return: MarshalAs(UnmanagedType.I1)]
 		internal static extern bool wrenHasVariable(IntPtr vm, 
 			[MarshalAs(UnmanagedType.LPStr)]string module, 
@@ -493,7 +493,7 @@ namespace Wrenit.Interlop
 		/// </summary>
 		/// <param name="vm">pointer to vm</param>
 		/// <param name="module">module to check</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		[return: MarshalAs(UnmanagedType.I1)]
 		internal static extern bool wrenHasModule(IntPtr vm, 
 			[MarshalAs(UnmanagedType.LPStr)]string module);
@@ -503,7 +503,7 @@ namespace Wrenit.Interlop
 		/// </summary>
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot for the runtime error</param>
-		[DllImport(WrenDll)]
+		[DllImport(Wrenit.DllName)]
 		internal static extern void wrenAbortFiber(IntPtr vm, int slot);
 
 		#endregion

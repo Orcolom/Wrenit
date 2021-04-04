@@ -1,7 +1,7 @@
 ﻿using System;
-using Wrenit.Builder;
+using Wren.it.Builder;
 
-namespace Wrenit.Consoles
+namespace Wren.it.Consoles
 {
 	internal class Program
 	{
@@ -24,6 +24,8 @@ System.print(ClassB.One(1,2,3))
 
 		public static void Main(string[] args)
 		{
+			Wrenit.Initialize();
+			
 			WrenitModule wrenitModule = new WrenitModule("const",
 				@"
 					class ClassA {

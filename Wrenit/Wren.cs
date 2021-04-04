@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using Wrenit.Interlop;
+using Wren.it.Interlop;
 
-namespace Wrenit
+namespace Wren.it
 {
 	/// <summary>
 	/// Method that will be called from wren 
