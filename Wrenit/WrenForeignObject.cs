@@ -53,8 +53,13 @@ namespace Wren.it
 		{
 			if (_vm.TryGetTarget(out WrenVm vm))
 			{
-				vm.FreeForeignObject(_id);
+				Free(vm);
 			}
+		}
+
+		internal void Free(WrenVm vm)
+		{
+			vm.FreeForeignObject(_id);
 		}
 	}
 }

@@ -313,8 +313,7 @@ namespace Wren.it.Interlop
 		/// <param name="vm">pointer to c vm</param>
 		/// <param name="slot">slot to get</param>
 		[DllImport(Wrenit.DllName)]
-		[return: MarshalAs(UnmanagedType.LPStr)]
-		internal static extern string wrenGetSlotString(IntPtr vm, int slot);
+		internal static extern IntPtr wrenGetSlotString(IntPtr vm, int slot);
 
 		/// <summary>
 		/// Stores null in <paramref name="slot"/>.

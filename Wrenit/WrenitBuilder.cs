@@ -59,11 +59,7 @@ namespace Wren.it.Builder
 
 		public WrenForeignClass AsForeign()
 		{
-			return new WrenForeignClass()
-			{
-				Allocator = _allocator,
-				Finalizer = _finalizer,
-			};
+			return new WrenForeignClass(_allocator, _finalizer);
 		}
 	}
 

@@ -42,15 +42,19 @@ namespace Wren.it
 			GC.SuppressFinalize(this);
 		}
 
-		private void Free()
+		public void Free(WrenVm vm)
 		{
 			if (IsAlive == false) return;
+			vm.FreeHandle(Ptr);
+			Ptr = IntPtr.Zero;
+		}
+
+		private void Free()
+		{
 			if (_vm.TryGetTarget(out WrenVm vm))
 			{
-				WrenImport.wrenReleaseHandle(vm.Ptr, Ptr);
-				Ptr = IntPtr.Zero;
+				Free(vm);
 			}
-			else throw new ObjectDisposedException("Vm bound to this Handle is already disposed. there will be memory leaks");
 		}
 	}
 }

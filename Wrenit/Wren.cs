@@ -33,8 +33,20 @@ namespace Wren.it
 
 	public class WrenForeignClass
 	{
-		public WrenForeignMethodBinding Allocator;
-		public WrenFinalizerMethodBinding Finalizer;
+		public readonly WrenForeignMethodBinding Allocator;
+		public readonly WrenFinalizerMethodBinding Finalizer;
+
+		public WrenForeignClass(WrenForeignMethodBinding allocator)
+		{
+			Allocator = allocator;
+			Finalizer = new WrenFinalizerMethodBinding(null);
+		}
+		
+		public WrenForeignClass(WrenForeignMethodBinding allocator, WrenFinalizerMethodBinding finalizer)
+		{
+			Allocator = allocator;
+			Finalizer = finalizer;
+		}
 	}
 
 	/// <summary>
@@ -55,7 +67,7 @@ namespace Wren.it
 		{
 			IntPtr vm = Marshal.ReadIntPtr(data);
 			IntPtr id = Marshal.ReadIntPtr(data, IntPtr.Size);
-			WrenVm.GetVm(vm).FreeForeignObject(id);
+			WrenVm.GetVm(vm)?.FreeForeignObject(id);
 			_method?.Invoke(id);
 		}
 	}
@@ -89,9 +101,10 @@ namespace Wren.it
 	/// </summary>
 	public enum WrenErrorType
 	{
-		CompileError = 0,
-		RuntimeError = 1,
-		StackTrace = 2,
+		CompileError,
+		RuntimeError,
+		StackTrace,
+		WrenitRuntimeError,
 	}
 
 	/// <summary>
@@ -99,9 +112,9 @@ namespace Wren.it
 	/// </summary>
 	public enum WrenInterpretResult
 	{
-		Success = 0,
-		CompileError = 1,
-		RuntimeError = 2,
+		Success,
+		CompileError,
+		RuntimeError,
 	}
 
 	/// <summary>
@@ -110,7 +123,7 @@ namespace Wren.it
 	public enum WrenValueType
 	{
 		Bool = 0,
-		Num = 1,
+		Number = 1,
 		Foreign = 2,
 		List = 3,
 		Map = 4,
