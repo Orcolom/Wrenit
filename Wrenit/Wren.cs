@@ -1,9 +1,123 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using Wren.it.Interlop;
+using Wrenit.Interlop;
+using Wrenit.Utilities;
 
-namespace Wren.it
+namespace Wrenit
 {
+	public static class Wren
+	{
+		#if DEBUG
+		internal const string DllName = "wren_d.dll";
+		#else
+		internal const string DllName = "wren.dll";
+		#endif
+
+		private static readonly int[] WrenVersion = {0, 4, 0};
+		private static readonly string WrenVersionString = $"{WrenVersion[0]}.{WrenVersion[1]}.{WrenVersion[2]}";
+		private static readonly int WrenVersionNumber = WrenVersion[0] * 1000000 + WrenVersion[1] * 1000 + WrenVersion[2];
+
+		private static bool _didInitializeCheck = false;
+		
+		public static bool Initialize()
+		{
+			if (_didInitializeCheck) return true;
+
+			int version = WrenImport.wrenGetVersionNumber();
+
+			int patch = version % 1000;
+			int minor = ((version - patch) / 1000) % 1000;
+			int major = ((version - (minor * 1000) - patch) / 1000000) % 1000;
+
+			_didInitializeCheck = true;
+			if (version == WrenVersionNumber) return true;
+
+			throw new NotSupportedException(
+				$"{DllName} with version {major}.{minor}.{patch} is not supported. Dll with version {WrenVersionString} needed");
+		}
+
+		public static string CreateSignature(MethodType type, string name, int argumentCount)
+		{
+			argumentCount = CorrectArgumentCount(type, argumentCount);
+			name = CorrectName(type, name);
+			string arguments = CreateArgumentList(argumentCount);
+			
+			switch (type)
+			{
+				case MethodType.Method:
+				case MethodType.MethodStatic:
+					return $"{name}({arguments})";
+				case MethodType.MethodConstruct:
+					return $"init {name}({arguments})";
+				
+				case MethodType.FieldGetter:
+					return $"{name}";
+				case MethodType.FieldSetter:
+					return $"{name}=({arguments})";
+				case MethodType.SubScriptGetter:
+					return $"[{arguments}]";
+				case MethodType.SubScriptSetter:
+					return $"[{arguments}]=({arguments})";
+				
+				case MethodType.OperatorPrefixMinus:
+				case MethodType.OperatorPrefixNot:
+				case MethodType.OperatorPrefixTilda:
+					return name;
+			}
+
+			return null;
+		}
+
+		public static string CorrectName(MethodType type, string name)
+		{
+			switch (type)
+			{
+				default: return name;
+				
+				case MethodType.OperatorPrefixMinus:
+					return "-";
+				case MethodType.OperatorPrefixNot:
+					return "!";
+				case MethodType.OperatorPrefixTilda:
+					return "~";
+			}
+		}
+
+		internal static string CreateArgumentList(int argumentCount)
+		{
+			string arguments = null;
+			for (int i = 0; i < argumentCount; i++)
+			{
+				if (i + 1 < argumentCount) arguments += "_,";
+				else arguments += "_";
+			}
+
+			return arguments;
+		}
+
+		public static int CorrectArgumentCount(MethodType type, int argumentCount)
+		{
+			switch (type)
+			{
+				case MethodType.SubScriptGetter:
+				case MethodType.SubScriptSetter:
+				case MethodType.MethodStatic:
+				case MethodType.MethodConstruct:
+				case MethodType.Method: 
+					return argumentCount;
+
+				case MethodType.OperatorPrefixMinus:
+				case MethodType.OperatorPrefixNot:
+				case MethodType.OperatorPrefixTilda:
+				case MethodType.FieldGetter: 
+					return 0;
+				
+				default: 
+					return 1;
+			}
+		}
+	}
+		
 	/// <summary>
 	/// Method that will be called from wren 
 	/// </summary>

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Wren.it
+namespace Wrenit
 {
 	public sealed class WrenForeignObject<T> : WrenForeignObject
 	{

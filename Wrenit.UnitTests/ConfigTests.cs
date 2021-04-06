@@ -2,7 +2,7 @@
 using System.Security.Cryptography.X509Certificates;
 using NUnit.Framework;
 
-namespace Wren.it.UnitTests
+namespace Wrenit.UnitTests
 {
 	[TestFixture]
 	public class ConfigTests

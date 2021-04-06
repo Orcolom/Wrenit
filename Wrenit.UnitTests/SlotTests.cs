@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using NUnit.Framework;
 
-namespace Wren.it.UnitTests
+namespace Wrenit.UnitTests
 {
 	[TestFixture]
 	public class SlotTests

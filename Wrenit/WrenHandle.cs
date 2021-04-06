@@ -1,7 +1,7 @@
 ﻿using System;
-using Wren.it.Interlop;
+using Wrenit.Interlop;
 
-namespace Wren.it
+namespace Wrenit
 {
 	public sealed class WrenSignatureHandle : WrenHandle
 	{

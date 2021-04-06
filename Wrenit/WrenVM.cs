@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Wren.it.Interlop;
+using Wrenit.Interlop;
 
-namespace Wren.it
+namespace Wrenit
 {
 	public class WrenVm : IDisposable
 	{
@@ -46,7 +46,7 @@ namespace Wren.it
 		/// </summary>
 		public WrenVm()
 		{
-			Wrenit.Initialize();
+			Wren.Initialize();
 			Ptr = WrenImport.wrenNewVM(null);
 			VmList.Add(Ptr, new WeakReference<WrenVm>(this));
 		}
@@ -57,7 +57,7 @@ namespace Wren.it
 		/// <param name="wrenConfig"></param>
 		public WrenVm(WrenConfig wrenConfig)
 		{
-			Wrenit.Initialize();
+			Wren.Initialize();
 			_config = wrenConfig;
 
 			InterlopWrenConfiguration interlopConfiguration = new InterlopWrenConfiguration

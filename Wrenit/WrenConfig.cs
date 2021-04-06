@@ -1,6 +1,6 @@
-﻿using Wren.it.Interlop;
+﻿using Wrenit.Interlop;
 
-namespace Wren.it
+namespace Wrenit
 {
 	public struct WrenConfig
 	{

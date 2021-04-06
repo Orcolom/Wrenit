@@ -1,7 +1,7 @@
 ﻿using System;
-using Wren.it.Builder;
+using Wrenit.Utilities;
 
-namespace Wren.it.Consoles
+namespace Wrenit.Consoles
 {
 	internal class Program
 	{
@@ -24,9 +24,9 @@ System.print(ClassB.One(1,2,3))
 
 		public static void Main(string[] args)
 		{
-			Wrenit.Initialize();
-			
-			WrenitModule wrenitModule = new WrenitModule("const",
+			Wren.Initialize();
+			WrenBuilder.Build<WrenMath>();
+			WrenModule wrenModule = new WrenModule("const",
 				@"
 					class ClassA {
 						foreign static Two()
@@ -36,11 +36,11 @@ System.print(ClassB.One(1,2,3))
 						foreign static One(a,b,c)
 					}
 				",
-				new WrenitClass("ClassA", null, null,
-					new WrenitMethod(WrenitSignature.Method("Two"), true, Two)
+				new WrenClass("ClassA", null, null,
+					new WrenMethod(MethodType.MethodStatic, "Two", 0, Two)
 				),
-				new WrenitClass("ClassB", null, null,
-					new WrenitMethod(WrenitSignature.Method("One", 3), true, One)
+				new WrenClass("ClassB", null, null,
+					new WrenMethod(MethodType.MethodStatic, "One", 3, One)
 				)
 			);
 			
@@ -58,24 +58,24 @@ System.print(ClassB.One(1,2,3))
 			{
 				if (name == "const")
 				{
-					return wrenitModule.Source;
+					return wrenModule.Source;
 				};
 				return null;
 			};
 
 			config.BindForeignMethodHandler += (WrenVm _, string module, string className, bool isStatic, string signature) =>
 			{
-				if (wrenitModule.Name != module) return null;
-				WrenitClass @class = wrenitModule.FindClass(className);
-				WrenitMethod method = @class?.FindMethod(signature, isStatic);
+				if (wrenModule.Name != module) return null;
+				WrenClass @class = wrenModule.FindClass(className);
+				WrenMethod method = @class?.FindMethod(signature, isStatic);
 				return method?.MethodBinding;
 			};
 
 			config.BindForeignClassHandler += (WrenVm _, string module, string className) =>
 			{
-				if (wrenitModule.Name == module)
+				if (wrenModule.Name == module)
 				{
-					WrenitClass @class = wrenitModule.FindClass(className);
+					WrenClass @class = wrenModule.FindClass(className);
 					if (@class != null)
 					{
 						return @class.AsForeign();
