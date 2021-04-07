@@ -6,10 +6,10 @@ namespace Wrenit.Utilities
 {
 	struct Signature
 	{
-		public int Arguments;
-		public string Format;
-		public string ForcedName;
-		public Func<bool, string> CustomValue;
+		public readonly int Arguments;
+		public readonly string Format;
+		public readonly string ForcedName;
+		public readonly Func<bool, string> CustomValue;
 
 		// 0 = custom word
 		// 1 = name
@@ -19,7 +19,7 @@ namespace Wrenit.Utilities
 		private const string FormatNameArg = "{1}({2})";
 		private const string FormatName = "{1}";
 
-		public static Dictionary<MethodType, Signature> Signatures = new Dictionary<MethodType, Signature>()
+		public static readonly Dictionary<MethodType, Signature> Signatures = new Dictionary<MethodType, Signature>()
 		{
 			{MethodType.Method, new Signature(FormatNameArg, -1)},
 			{
@@ -70,6 +70,13 @@ namespace Wrenit.Utilities
 		}
 	}
 
+	public enum SignatureStyle
+	{
+		Signature,
+		Implementation,
+		ForeignImplementation,
+	}
+	
 	public enum MethodType
 	{
 		Method, // foo()

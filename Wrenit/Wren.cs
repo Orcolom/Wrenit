@@ -48,9 +48,9 @@ namespace Wrenit
 		/// <param name="type">type of the method signature</param>
 		/// <param name="name">name of the method</param>
 		/// <param name="argumentCount">amount of arguments wanted</param>
-		/// <param name="implement">create an implementation signature</param>
+		/// <param name="style">style of signature</param>
 		/// <returns>the wren style signature</returns>
-		public static string CreateSignature(MethodType type, string name, int argumentCount, bool implement = false)
+		public static string CreateSignature(MethodType type, string name, int argumentCount, SignatureStyle style = SignatureStyle.Signature)
 		{
 			Signature signature = Signature.Signatures[type];
 			if (signature.Arguments != -1)
@@ -58,7 +58,7 @@ namespace Wrenit
 				argumentCount = argumentCount > signature.Arguments ? signature.Arguments : argumentCount;
 			}
 
-			string arguments = CreateArgumentList(argumentCount, implement);
+			string arguments = CreateArgumentList(argumentCount, style != SignatureStyle.Signature);
 
 			if (string.IsNullOrEmpty(signature.ForcedName) == false)
 			{
@@ -68,12 +68,15 @@ namespace Wrenit
 			string extra = null;
 			if (signature.CustomValue != null)
 			{
-				extra = signature.CustomValue.Invoke(implement);
+				extra = signature.CustomValue.Invoke(style != SignatureStyle.Signature);
 			}
 
 			string result = string.Format(signature.Format, extra, name, arguments).Trim();
-			
-			if (implement) result = $"foreign {result}";
+
+			if (style == SignatureStyle.ForeignImplementation)
+			{
+				result = $"foreign {result}";
+			}
 			
 			return result;
 		}
