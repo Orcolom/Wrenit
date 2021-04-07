@@ -4,19 +4,110 @@ using System.Reflection;
 
 namespace Wrenit.Utilities
 {
+	struct Signature
+	{
+		public int Arguments;
+		public string Format;
+		public string ForcedName;
+		public Func<bool, string> CustomValue;
+
+		// 0 = custom word
+		// 1 = name
+		// 2 = arguments list
+		// 3 = extra arguments list
+		private const string FormatCustomNameArg = "{0} {1}({2})";
+		private const string FormatNameArg = "{1}({2})";
+		private const string FormatName = "{1}";
+
+		public static Dictionary<MethodType, Signature> Signatures = new Dictionary<MethodType, Signature>()
+		{
+			{MethodType.Method, new Signature(FormatNameArg, -1)},
+			{
+				MethodType.StaticMethod,
+				new Signature(FormatCustomNameArg, -1, customValue: implement => implement ? "static" : "")
+			},
+			{
+				MethodType.Construct,
+				new Signature(FormatCustomNameArg, -1, customValue: implement => implement ? "construct" : "init")
+			},
+			{MethodType.RangeInclusive, new Signature(FormatNameArg, 1, "..")},
+			{MethodType.RangeExclusive, new Signature(FormatNameArg, 1, "...")},
+			{MethodType.Times, new Signature(FormatNameArg, 1, "*")},
+			{MethodType.Divide, new Signature(FormatNameArg, 1, "/")},
+			{MethodType.Modulo, new Signature(FormatNameArg, 1, "%")},
+			{MethodType.Plus, new Signature(FormatNameArg, 1, "+")},
+			{MethodType.Minus, new Signature(FormatNameArg, 1, "-")},
+			{MethodType.BitwiseLeftShift, new Signature(FormatNameArg, 1, "<<")},
+			{MethodType.BitwiseRightShift, new Signature(FormatNameArg, 1, ">>")},
+			{MethodType.BitwiseXor, new Signature(FormatNameArg, 1, "^")},
+			{MethodType.BitwiseOr, new Signature(FormatNameArg, 1, "|")},
+			{MethodType.BitwiseAnd, new Signature(FormatNameArg, 1, "&")},
+			{MethodType.SmallerThen, new Signature(FormatNameArg, 1, "<")},
+			{MethodType.SmallerEqualThen, new Signature(FormatNameArg, 1, "<=")},
+			{MethodType.BiggerThen, new Signature(FormatNameArg, 1, ">")},
+			{MethodType.BiggerEqualThen, new Signature(FormatNameArg, 1, ">=")},
+			{MethodType.Equal, new Signature(FormatNameArg, 1, "==")},
+			{MethodType.NotEqual, new Signature(FormatNameArg, 1, "!=")},
+			{MethodType.Is, new Signature(FormatNameArg, 1, "is")},
+			{MethodType.FieldGetter, new Signature(FormatName, 0)},
+			{MethodType.Inverse, new Signature(FormatName, 0, "-")},
+			{MethodType.Not, new Signature(FormatName, 0, "!")},
+			{MethodType.Tilda, new Signature(FormatName, 0, "~")},
+			{MethodType.FieldSetter, new Signature("{1}=({2})", 1)},
+			{
+				MethodType.SubScriptSetter,
+				new Signature("[{2}]=({0})", -1, customValue: implement => implement ? "value" : "_")
+			},
+			{MethodType.SubScriptGetter, new Signature("[{2}]", -1)},
+		};
+
+		private Signature(string format, int arguments, string customName = null, Func<bool, string> customValue = null)
+		{
+			ForcedName = customName;
+			Arguments = arguments;
+			Format = format;
+			CustomValue = customValue;
+		}
+	}
+
 	public enum MethodType
 	{
 		Method, // foo()
-		MethodStatic, // static foo()
-		MethodConstruct, // init foo()
+		StaticMethod, // static foo()
+		Construct, // init foo()
+
 		FieldGetter, // foo
 		FieldSetter, // foo=()
-		SubScriptGetter, // []=()
+		SubScriptGetter, // []
 		SubScriptSetter, // []=()
 
-		OperatorPrefixNot, // !
-		OperatorPrefixMinus, // -
-		OperatorPrefixTilda, // ~
+		Not, // !
+		Inverse, // -
+		Tilda, // ~
+
+		RangeInclusive, // ..		?RangeExlusive
+		RangeExclusive, // ...	?RangeInclusive (check docs for dot count)
+
+		Times, // * 
+		Divide, // / 
+		Modulo, // % 
+		Plus, // + 
+		Minus, // - 
+
+		BitwiseLeftShift, // <<		BitwiseLeft
+		BitwiseRightShift, // >>		BitwiseRight
+		BitwiseXor, // ^		BitwiseXor
+		BitwiseOr, // |		BitwiseOr
+		BitwiseAnd, // &		BitwiseAnd
+
+		SmallerThen,
+		SmallerEqualThen,
+		BiggerThen,
+		BiggerEqualThen,
+		Equal,
+		NotEqual,
+
+		Is,
 	}
 
 	[AttributeUsage(AttributeTargets.Class)]
@@ -80,7 +171,7 @@ namespace Wrenit.Utilities
 			Type moduleType = typeof(T);
 			WrenModuleAttribute moduleAttribute = moduleType.GetAttribute<WrenModuleAttribute>();
 			if (moduleAttribute == null) return null;
-			if (string.IsNullOrEmpty(moduleAttribute.Source))  return null;
+			if (string.IsNullOrEmpty(moduleAttribute.Source)) return null;
 
 			List<WrenClass> _classes = new List<WrenClass>();
 			Type[] nestedTypes = moduleType.GetNestedTypes();

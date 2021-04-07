@@ -243,7 +243,7 @@ namespace Wrenit.Utilities
 		public WrenMethod(MethodType type, string name, int argumentCount, WrenForeignMethod method)
 		{
 			Signature = Wren.CreateSignature(type, name, argumentCount);
-			IsStatic = type == MethodType.MethodStatic;
+			IsStatic = type == MethodType.StaticMethod;
 			MethodBinding = new WrenForeignMethodBinding(method);
 			_type = type;
 		}

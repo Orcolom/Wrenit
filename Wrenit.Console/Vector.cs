@@ -34,7 +34,7 @@ namespace Wrenit.Consoles
 			[WrenMethod(MethodType.Method, argumentCount: 3)]
 			public static void Modulo(WrenVm vm) { }
 
-			[WrenMethod(MethodType.MethodStatic)]
+			[WrenMethod(MethodType.StaticMethod)]
 			public static void Zero(WrenVm vm) { }
 
 			[WrenMethod(MethodType.FieldGetter, "x")]

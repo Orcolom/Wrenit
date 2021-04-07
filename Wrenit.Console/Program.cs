@@ -37,10 +37,10 @@ System.print(ClassB.One(1,2,3))
 					}
 				",
 				new WrenClass("ClassA", null, null,
-					new WrenMethod(MethodType.MethodStatic, "Two", 0, Two)
+					new WrenMethod(MethodType.StaticMethod, "Two", 0, Two)
 				),
 				new WrenClass("ClassB", null, null,
-					new WrenMethod(MethodType.MethodStatic, "One", 3, One)
+					new WrenMethod(MethodType.StaticMethod, "One", 3, One)
 				)
 			);
 			

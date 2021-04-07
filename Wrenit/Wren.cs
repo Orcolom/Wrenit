@@ -18,7 +18,7 @@ namespace Wrenit
 		private static readonly int WrenVersionNumber = WrenVersion[0] * 1000000 + WrenVersion[1] * 1000 + WrenVersion[2];
 
 		private static bool _didInitializeCheck = false;
-		
+
 		/// <summary>
 		/// initialize checks if we can communicate with the native code
 		/// </summary>
@@ -43,109 +43,67 @@ namespace Wrenit
 
 		/// <summary>
 		/// create a wren signature based on its type name and arguments.
-		/// Will correct a name using <see cref="CorrectName"/> and argument count using <see cref="CorrectArgumentCount"/> if needed
+		/// Will correct a name and argument if needed
 		/// </summary>
 		/// <param name="type">type of the method signature</param>
 		/// <param name="name">name of the method</param>
 		/// <param name="argumentCount">amount of arguments wanted</param>
+		/// <param name="implement">create an implementation signature</param>
 		/// <returns>the wren style signature</returns>
-		public static string CreateSignature(MethodType type, string name, int argumentCount)
+		public static string CreateSignature(MethodType type, string name, int argumentCount, bool implement = false)
 		{
-			argumentCount = CorrectArgumentCount(type, argumentCount);
-			name = CorrectName(type, name);
-			string arguments = CreateArgumentList(argumentCount);
+			Signature signature = Signature.Signatures[type];
+			if (signature.Arguments != -1)
+			{
+				argumentCount = argumentCount > signature.Arguments ? signature.Arguments : argumentCount;
+			}
+
+			string arguments = CreateArgumentList(argumentCount, implement);
+
+			if (string.IsNullOrEmpty(signature.ForcedName) == false)
+			{
+				name = signature.ForcedName;
+			}
+
+			string extra = null;
+			if (signature.CustomValue != null)
+			{
+				extra = signature.CustomValue.Invoke(implement);
+			}
+
+			string result = string.Format(signature.Format, extra, name, arguments).Trim();
 			
-			switch (type)
-			{
-				case MethodType.Method:
-				case MethodType.MethodStatic:
-					return $"{name}({arguments})";
-				case MethodType.MethodConstruct:
-					return $"init {name}({arguments})";
-				
-				case MethodType.FieldGetter:
-					return $"{name}";
-				case MethodType.FieldSetter:
-					return $"{name}=({arguments})";
-				case MethodType.SubScriptGetter:
-					return $"[{arguments}]";
-				case MethodType.SubScriptSetter:
-					return $"[{arguments}]=(_)";
-				
-				case MethodType.OperatorPrefixMinus:
-				case MethodType.OperatorPrefixNot:
-				case MethodType.OperatorPrefixTilda:
-					return name;
-			}
-
-			return null;
+			if (implement) result = $"foreign {result}";
+			
+			return result;
 		}
 
-		/// <summary>
-		/// correct a method name if needed
-		/// </summary>
-		/// <param name="type"></param>
-		/// <param name="name"></param>
-		/// <returns></returns>
-		public static string CorrectName(MethodType type, string name)
+		internal static int CorrectArgumentCount(MethodType type, int count)
 		{
-			switch (type)
-			{
-				default: return name;
-				
-				case MethodType.OperatorPrefixMinus:
-					return "-";
-				case MethodType.OperatorPrefixNot:
-					return "!";
-				case MethodType.OperatorPrefixTilda:
-					return "~";
-			}
-		}
+				Signature signature = Signature.Signatures[type];
+				if (signature.Arguments != -1)
+				{
+					return count > signature.Arguments ? signature.Arguments : count;
+				}
 
-		/// <summary>
-		/// correct amount of arguments if needed
-		/// </summary>
-		/// <param name="type"></param>
-		/// <param name="argumentCount"></param>
-		/// <returns>correct argument count</returns>
-		public static int CorrectArgumentCount(MethodType type, int argumentCount)
-		{
-			switch (type)
-			{
-				case MethodType.SubScriptGetter:
-				case MethodType.SubScriptSetter:
-				case MethodType.MethodStatic:
-				case MethodType.MethodConstruct:
-				case MethodType.Method: 
-					return argumentCount;
-
-				case MethodType.OperatorPrefixMinus:
-				case MethodType.OperatorPrefixNot:
-				case MethodType.OperatorPrefixTilda:
-				case MethodType.FieldGetter: 
-					return 0;
-				
-				default: 
-					return 1;
-			}
+				return count;
 		}
-		
 		/// <summary>
 		/// creates an argument list string 
 		/// </summary>
 		/// <param name="argumentCount">amount of wanted arguments</param>
-		internal static string CreateArgumentList(int argumentCount)
+		/// <param name="implement">do an argument list for an implementation signature</param>
+		internal static string CreateArgumentList(int argumentCount, bool implement)
 		{
 			string arguments = null;
 			for (int i = 0; i < argumentCount; i++)
 			{
-				if (i + 1 < argumentCount) arguments += "_,";
-				else arguments += "_";
+				arguments += implement ? (char) ('a' + i) : '_';
+				if (i + 1 < argumentCount) arguments += ',';
 			}
 
 			return arguments;
 		}
-
 	}
 
 	#region Delagates
@@ -190,7 +148,7 @@ namespace Wrenit
 		/// a foreign method binding for the allocator
 		/// </summary>
 		public readonly WrenForeignMethodBinding Allocator;
-		
+
 		/// <summary>
 		/// a foreign method binding for the finalizer
 		/// </summary>
@@ -204,7 +162,7 @@ namespace Wrenit
 			Allocator = allocator;
 			Finalizer = new WrenFinalizerMethodBinding(null);
 		}
-		
+
 		/// <summary>
 		/// create a class binding
 		/// </summary>
@@ -272,7 +230,7 @@ namespace Wrenit
 	#endregion
 
 	#region Enums
-	
+
 	/// <summary>
 	/// error message type
 	/// </summary>
@@ -309,7 +267,7 @@ namespace Wrenit
 
 		// The object is of a type that isn't accessible by the C API.
 		Unknown = 7,
-		
+
 		#endregion
 	}
 }
