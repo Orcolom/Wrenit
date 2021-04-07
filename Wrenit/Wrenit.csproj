@@ -46,7 +46,7 @@
     <Compile Include="Wren.cs" />
     <Compile Include="WrenForeignObject.cs" />
     <Compile Include="WrenHandle.cs" />
-    <Compile Include="WrenInterlop.cs" />
+    <Compile Include="WrenInterop.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WrenConfig.cs" />
     <Compile Include="WrenBuilder.cs" />

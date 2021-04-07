@@ -22,17 +22,11 @@ namespace Wrenit.Utilities
 	[AttributeUsage(AttributeTargets.Class)]
 	public class WrenModuleAttribute : Attribute
 	{
-		public readonly string Name;
+		public string Name;
 		public readonly string Source;
 
 		public WrenModuleAttribute(string source)
 		{
-			Source = source;
-		}
-
-		public WrenModuleAttribute(string name, string source)
-		{
-			Name = name;
 			Source = source;
 		}
 	}

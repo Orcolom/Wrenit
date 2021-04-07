@@ -9,7 +9,7 @@ namespace Wrenit.Consoles
 		public double y;
 	}
 
-	[WrenModule(WrenSource)]
+	[WrenModule(WrenSource, Name = "Math")]
 	public class WrenMath
 	{
 		private const string WrenSource =
@@ -26,7 +26,7 @@ namespace Wrenit.Consoles
 			public static void Init(WrenVm vm) { }
 
 			[WrenFinalizer]
-			public static void Fin(IntPtr data) { }
+			public static void Fin(WrenForeignObject data) { }
 
 			[WrenMethod(MethodType.Method, "Add", 1)]
 			public static void AddNumber(WrenVm vm) { }

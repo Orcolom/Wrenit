@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 
 // all code related to and only accessible for pinvoke
-namespace Wrenit.Interlop
+namespace Wrenit.Interop
 {
 	internal static class WrenImport
 	{
@@ -31,9 +31,9 @@ namespace Wrenit.Interlop
 		/// <summary>
 		/// Get default initialized WrenConfig data
 		/// </summary>
-		/// <param name="configuration">interlop config filled with the default values</param>
+		/// <param name="configuration">interop config filled with the default values</param>
 		[DllImport(Wren.DllName)]
-		internal static extern void wrenInitConfiguration([Out] InterlopWrenConfiguration configuration);
+		internal static extern void wrenInitConfiguration([Out] InteropWrenConfiguration configuration);
 
 		/// <summary>
 		/// Creates a new Wren virtual machine using the given <paramref name="configuration"/>.
@@ -42,7 +42,7 @@ namespace Wrenit.Interlop
 		/// <param name="configuration">config with bindings and settings</param>
 		/// <returns>pointer to c vm</returns>
 		[DllImport(Wren.DllName)]
-		internal static extern IntPtr wrenNewVM(InterlopWrenConfiguration configuration);
+		internal static extern IntPtr wrenNewVM(InteropWrenConfiguration configuration);
 
 		/// <summary>
 		/// Disposes of all resources is use by <paramref name="vm"/>,
@@ -124,7 +124,7 @@ namespace Wrenit.Interlop
 		/// Calls <paramref name="method"/>, using the receiver and arguments previously set up on the stack.
 		///
 		/// <para>
-		/// 	<paramref name="method"/> must have been created by a call to <see cref="wrenMakeCallHandle()"/>. The
+		/// 	<paramref name="method"/> must have been created by a call to <see cref="wrenMakeCallHandle"/>. The
 		/// 	arguments to the method must be already on the stack. The receiver should be
 		/// 	in slot 0 with the remaining arguments following it, in order. It is an
 		/// 	error if the number of arguments provided does not match the method's
@@ -168,7 +168,6 @@ namespace Wrenit.Interlop
 		/// </summary>
 		/// <param name="vm"></param>
 		/// <param name="slots"></param>
-		/// <returns></returns>
 		[DllImport(Wren.DllName)]
 		internal static extern void wrenEnsureSlots(IntPtr vm, int slots);
 
@@ -255,8 +254,8 @@ namespace Wrenit.Interlop
 		internal static extern void wrenSetSlotDouble(IntPtr vm, int slot, double value);
 		
 		/// <summary>
-		/// Creates a new instance of the foreign class stored in [classSlot] with [size]
-		/// bytes of raw storage and places the resulting object in [slot].
+		/// Creates a new instance of the foreign class stored in <paramref name="classSlot"/> with <paramref name="size"/>
+		/// bytes of raw storage and places the resulting object in <paramref name="slot"/>.
 		///
 		/// <para>
 		/// 	This does not invoke the foreign class's constructor on the new instance. If
@@ -276,7 +275,7 @@ namespace Wrenit.Interlop
 
 		
 		/// <summary>
-		/// Reads a foreign object from [slot] and returns a pointer to the foreign data
+		/// Reads a foreign object from <paramref name="slot"/> and returns a pointer to the foreign data
 		/// stored with it.
 		///
 		/// It is an error to call this if the slot does not contain an instance of a
@@ -597,7 +596,7 @@ namespace Wrenit.Interlop
 	/// <param name="vm">pointer to the c vm</param>
 	/// <param name="name">name of the module</param>
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-	internal delegate InterlopWrenLoadModuleResult WrenLoadModuleFn(IntPtr vm,
+	internal delegate InteropWrenLoadModuleResult WrenLoadModuleFn(IntPtr vm,
 		[MarshalAs(UnmanagedType.LPStr)] string name);
 
 	/// <summary>
@@ -609,7 +608,7 @@ namespace Wrenit.Interlop
 	/// <param name="result">result created by <see cref="F:InterlopWrenConfiguration.LoadModuleFn"/></param>
 	internal delegate void WrenLoadModuleCompleteFn(IntPtr vm,
 		[MarshalAs(UnmanagedType.LPStr)] string name,
-		InterlopWrenLoadModuleResult result);
+		InteropWrenLoadModuleResult result);
 
 	/// <summary>
 	/// Returns a pointer to a foreign method on <paramref name="className"/> in <paramref name="module"/> with <paramref name="signature"/>.
@@ -618,7 +617,7 @@ namespace Wrenit.Interlop
 	/// <param name="module">module name</param>
 	/// <param name="className">class name</param>
 	/// <param name="isStatic">is function static</param>
-	/// <param name="signature">function signatur</param>
+	/// <param name="signature">function signature</param>
 	internal delegate IntPtr WrenBindForeignMethodFn(IntPtr vm,
 		[MarshalAs(UnmanagedType.LPStr)] string module,
 		[MarshalAs(UnmanagedType.LPStr)] string className,
@@ -632,7 +631,7 @@ namespace Wrenit.Interlop
 	/// <param name="vm">pointer to c vm</param>
 	/// <param name="module">module name</param>
 	/// <param name="className">class name</param>
-	internal delegate InterlopWrenForeignClassMethods WrenBindForeignClassFn(IntPtr vm,
+	internal delegate InteropWrenForeignClassMethods WrenBindForeignClassFn(IntPtr vm,
 		[MarshalAs(UnmanagedType.LPStr)] string module,
 		[MarshalAs(UnmanagedType.LPStr)] string className);
 
@@ -640,15 +639,15 @@ namespace Wrenit.Interlop
 	/// A function callable from Wren code, but implemented in C#.
 	/// </summary>
 	/// <param name="vm"></param>
-	internal delegate void InterlopWrenForeignMethodFn(IntPtr vm);
+	internal delegate void InteropWrenForeignMethodFn(IntPtr vm);
 
-	internal struct InterlopWrenForeignClassMethods
+	internal struct InteropWrenForeignClassMethods
 	{
 		/// <summary>
 		/// The callback invoked when the foreign object is created.
 		///
 		/// This must be provided. Inside the body of this,
-		/// it must call <see cref="WrenImport.wrenSetSlotNewForeign()"/> exactly once.
+		/// it must call <see cref="WrenImport.wrenSetSlotNewForeign"/> exactly once.
 		/// </summary>
 		public IntPtr AllocateFn;
 
@@ -662,7 +661,7 @@ namespace Wrenit.Interlop
 	/// <summary>
 	/// result from <see cref="F:InterlopWrenConfiguration.LoadModuleFn"/> call
 	/// </summary>
-	internal struct InterlopWrenLoadModuleResult
+	internal struct InteropWrenLoadModuleResult
 	{
 		/// <summary>
 		/// Source code of the module
@@ -678,10 +677,10 @@ namespace Wrenit.Interlop
 	}
 
 	/// <summary>
-	/// interlop struct for WrenConfiguration
+	/// interop struct for WrenConfiguration
 	/// </summary>
 	[StructLayout(LayoutKind.Sequential)]
-	internal class InterlopWrenConfiguration
+	internal class InteropWrenConfiguration
 	{
 		/// <summary>
 		///		The callback Wren will use to allocate, reallocate, and deallocate memory.
@@ -691,7 +690,9 @@ namespace Wrenit.Interlop
 		///			Wrenit doesn't give a custom Reallocate function. here for struct layout
 		///		</remarks>
 		/// </summary>
+		#pragma warning disable 649
 		public IntPtr ReallocateFn;
+		#pragma warning restore 649
 
 		/// <inheritdoc cref="WrenResolveModuleFn"/>
 		[MarshalAs(UnmanagedType.FunctionPtr)]
@@ -807,7 +808,9 @@ namespace Wrenit.Interlop
 		///		Wrenit doesnt give the option to provide this. here for struct layout
 		/// </remarks>
 		/// </summary>
+		#pragma warning disable 649
 		public IntPtr UserData;
+		#pragma warning restore 649
 	}
 
 	#endregion

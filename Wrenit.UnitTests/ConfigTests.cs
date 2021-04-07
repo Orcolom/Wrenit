@@ -183,7 +183,7 @@ namespace Wrenit.UnitTests
 			{
 				if (name == className)
 				{
-					return new WrenForeignClass(
+					return new WrenForeignClassBinding(
 						new WrenForeignMethodBinding(Alloc)
 					);
 				}

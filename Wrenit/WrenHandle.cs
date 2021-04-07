@@ -1,5 +1,5 @@
 ﻿using System;
-using Wrenit.Interlop;
+using Wrenit.Interop;
 
 namespace Wrenit
 {
@@ -45,7 +45,8 @@ namespace Wrenit
 		public void Free(WrenVm vm)
 		{
 			if (IsAlive == false) return;
-			vm.FreeHandle(Ptr);
+			vm.RemoveHandle(Ptr);
+			WrenImport.wrenReleaseHandle(vm.Ptr, Ptr);
 			Ptr = IntPtr.Zero;
 		}
 

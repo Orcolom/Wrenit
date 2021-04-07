@@ -2,40 +2,51 @@
 
 namespace Wrenit
 {
+	/// <summary>
+	/// A foreign object bound to a wren vm
+	/// </summary>
 	public sealed class WrenForeignObject<T> : WrenForeignObject
 	{
-		// ReSharper disable once InconsistentNaming
-		private new T Obj;
-		public new T Value
+		/// <summary>
+		/// get the data in the foreign object
+		/// </summary>
+		public T TypedData
 		{
-			get => Obj;
-			set => Obj = value;
+			get => (T)Data;
+			set => Data = value;
 		}
 
 		internal WrenForeignObject(WrenVm vm, IntPtr id) : base(vm, id, default(T)) { }
 	}
 
+	/// <summary>
+	/// A foreign object bound to a wren vm
+	/// </summary>
 	public class WrenForeignObject : IDisposable
 	{
+		/// <summary>
+		/// a weak reference to the bound vm
+		/// </summary>
 		private readonly WeakReference<WrenVm> _vm;
+		
+		/// <summary>
+		/// id of the foreign object
+		/// </summary>
 		private readonly IntPtr _id;
-		// ReSharper disable once MemberCanBePrivate.Global
-		protected object Obj;
 
-		public object Value
-		{
-			get => Obj;
-			set => Obj = value;
-		}
+		/// <summary>
+		/// the data in the foreign object
+		/// </summary>
+		public object Data { get; set; }
 
 		// ReSharper disable once UnusedMember.Local
 		private WrenForeignObject() { }
 
-		internal WrenForeignObject(WrenVm vm, IntPtr id, object obj)
+		internal WrenForeignObject(WrenVm vm, IntPtr id, object data)
 		{
 			_vm = new WeakReference<WrenVm>(vm);
 			_id = id;
-			Obj = obj;
+			Data = data;
 		}
 
 		~WrenForeignObject()
@@ -43,12 +54,19 @@ namespace Wrenit
 			Free();
 		}
 
+		/// <summary>
+		/// dispose and free a foreign object.
+		/// Note this doesn't instantly dispose of the Data. if there are no other references it will be picked up by the GC 
+		/// </summary>
 		public void Dispose()
 		{
 			Free();
 			GC.SuppressFinalize(this);
 		}
 
+		/// <summary>
+		/// function that does the actual freeing
+		/// </summary>
 		private void Free()
 		{
 			if (_vm.TryGetTarget(out WrenVm vm))
@@ -56,10 +74,13 @@ namespace Wrenit
 				Free(vm);
 			}
 		}
-
+		
+		/// <summary>
+		/// function that does the actual freeing
+		/// </summary>
 		internal void Free(WrenVm vm)
 		{
-			vm.FreeForeignObject(_id);
+			vm.RemoveForeignObject(_id);
 		}
 	}
 }

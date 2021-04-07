@@ -1,25 +1,40 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Wrenit.Interlop;
+using Wrenit.Interop;
 
 namespace Wrenit
 {
-	public class WrenVm : IDisposable
+	/// <summary>
+	/// A VM to interpret, call and run wren syntax files   
+	/// </summary>
+	public sealed class WrenVm : IDisposable
 	{
 		/// <summary>
-		/// list of all vm's
+		/// list of all active vm's
 		/// </summary>
 		private static readonly Dictionary<IntPtr, WeakReference<WrenVm>> VmList =
 			new Dictionary<IntPtr, WeakReference<WrenVm>>();
 
-		// keep handles so they dont get gc'd without vm being disposed or manually disposed
+		/// <summary>
+		/// list of handles created by the vm. They dont get garbage collected without disposing them 
+		/// </summary>
 		private readonly Dictionary<IntPtr, WrenHandle> _handles = new Dictionary<IntPtr, WrenHandle>();
 
+		/// <summary>
+		/// list of foreign objects created by the vm. They dont get garbage collected without disposing them 
+		/// </summary>
 		private readonly Dictionary<IntPtr, WrenForeignObject>
 			_foreignObjects = new Dictionary<IntPtr, WrenForeignObject>();
 
+		/// <summary>
+		/// list of unused foreign id's. when disposing a foreign object its id gets added here to be reused
+		/// </summary>
 		private readonly Queue<IntPtr> _unusedForeignIds = new Queue<IntPtr>();
+		
+		/// <summary>
+		/// last used foreign id if no unused foreign ids are available
+		/// </summary>
 		private int _lastForeignId = 0;
 
 		/// <summary>
@@ -36,8 +51,6 @@ namespace Wrenit
 		/// is the vm currently alive
 		/// </summary>
 		public bool IsAlive => Ptr != IntPtr.Zero;
-
-		public static int GetVersion() => WrenImport.wrenGetVersionNumber();
 
 		#region Lifetime
 
@@ -60,7 +73,7 @@ namespace Wrenit
 			Wren.Initialize();
 			_config = wrenConfig;
 
-			InterlopWrenConfiguration interlopConfiguration = new InterlopWrenConfiguration
+			InteropWrenConfiguration interopConfiguration = new InteropWrenConfiguration
 			{
 				InitialHeapSize = new UIntPtr(wrenConfig.InitialHeapSize),
 				MinHeapSize = new UIntPtr(wrenConfig.MinHeapSize),
@@ -68,15 +81,15 @@ namespace Wrenit
 			};
 
 			// make native "bindings" for wanted functions
-			if (wrenConfig.WriteHandler != null) interlopConfiguration.WriteFn = OnWrenWrite;
-			if (wrenConfig.ErrorHandler != null) interlopConfiguration.ErrorFn = OnWrenError;
-			if (wrenConfig.ResolveModuleHandler != null) interlopConfiguration.ResolveModuleFn = OnWrenResolveModule;
-			if (wrenConfig.LoadModuleHandler != null) interlopConfiguration.LoadModuleFn = OnWrenLoadModule;
+			if (wrenConfig.WriteHandler != null) interopConfiguration.WriteFn = OnWrenWrite;
+			if (wrenConfig.ErrorHandler != null) interopConfiguration.ErrorFn = OnWrenError;
+			if (wrenConfig.ResolveModuleHandler != null) interopConfiguration.ResolveModuleFn = OnWrenResolveModule;
+			if (wrenConfig.LoadModuleHandler != null) interopConfiguration.LoadModuleFn = OnWrenLoadModule;
 			if (wrenConfig.BindForeignMethodHandler != null)
-				interlopConfiguration.BindForeignMethodFn = OnWrenBindForeignMethod;
-			if (wrenConfig.BindForeignClassHandler != null) interlopConfiguration.BindForeignClassFn = OnWrenBindForeignClass;
+				interopConfiguration.BindForeignMethodFn = OnWrenBindForeignMethod;
+			if (wrenConfig.BindForeignClassHandler != null) interopConfiguration.BindForeignClassFn = OnWrenBindForeignClass;
 
-			Ptr = WrenImport.wrenNewVM(interlopConfiguration);
+			Ptr = WrenImport.wrenNewVM(interopConfiguration);
 			VmList.Add(Ptr, new WeakReference<WrenVm>(this));
 		}
 
@@ -94,6 +107,9 @@ namespace Wrenit
 			GC.SuppressFinalize(this);
 		}
 
+		/// <summary>
+		/// actual function that frees the vm and all its dependents
+		/// </summary>
 		private void Free()
 		{
 			if (IsAlive == false) return;
@@ -106,7 +122,7 @@ namespace Wrenit
 
 			handles.Clear();
 
-			// copy foreigns dictionary so they can safely be discarded
+			// copy foreign dictionary so they can safely be discarded
 			Dictionary<IntPtr, WrenForeignObject> foreignObjects = new Dictionary<IntPtr, WrenForeignObject>(_foreignObjects);
 			foreach (var pair in foreignObjects)
 			{
@@ -120,6 +136,10 @@ namespace Wrenit
 
 			Ptr = IntPtr.Zero;
 		}
+
+		#endregion
+
+		#region Internal Access
 
 		/// <summary>
 		/// Get a vm via its c pointer
@@ -135,11 +155,51 @@ namespace Wrenit
 			return vm;
 		}
 
+		/// <summary>
+		/// remove a foreign object from this vm's list.
+		/// Note this does not free the object
+		/// </summary>
+		/// <param name="id">pointer of the object</param>
+		internal void RemoveForeignObject(IntPtr id)
+		{
+			if (_foreignObjects.ContainsKey(id) == false) return;
+
+			_foreignObjects.Remove(id);
+			_unusedForeignIds.Enqueue(id);
+		}
+
+		/// <summary>
+		/// remove a handle from the vm's list.
+		/// Note this does not free the object
+		/// </summary>
+		/// <param name="handlePtr">pointer of the handle</param>
+		internal void RemoveHandle(IntPtr handlePtr)
+		{
+			_handles.Remove(handlePtr);
+		}
+
+		/// <summary>
+		/// get foreign object by its id
+		/// </summary>
+		/// <param name="id">id of the foreign object</param>
+		/// <returns>returns object if found</returns>
+		internal WrenForeignObject GetForeignById(IntPtr id)
+		{
+			if (_foreignObjects.ContainsKey(id) == false) return null;
+
+			return _foreignObjects[id];
+		}
+
 		#endregion
 
 		#region Run
-
-		/// <inheritdoc cref="WrenImport.wrenInterpret(IntPtr,string,string)"/>
+		
+		/// <summary>
+		/// Runs <paramref name="source"/>, a string of Wren source code in a new fiber in the context of <paramref name="module"/>.
+		/// </summary>
+		/// <param name="module">module name</param>
+		/// <param name="source">module source</param>
+		/// <returns>interpret result</returns>
 		public WrenInterpretResult Interpret(string module, string source)
 		{
 			if (IsAlive == false)
@@ -149,7 +209,19 @@ namespace Wrenit
 			return error;
 		}
 
-		/// <inheritdoc cref="WrenImport.wrenMakeCallHandle(IntPtr,string)"/>
+		/// <summary>
+		/// Creates a handle that can be used to invoke a method with <paramref name="signature"/>
+		///
+		/// <para>
+		/// 	This handle can be used repeatedly to directly invoke that method using <see cref="Call"/>.
+		/// </para>
+		///
+		/// <para>
+		///		When you are done with this handle, it must be released using its <see cref="WrenHandle.Dispose()"/> or Vm's <see cref="ReleaseHandle"/>.
+		/// </para>
+		/// </summary>
+		/// <param name="signature">method signature</param>
+		/// <returns>pointer to handle</returns>
 		public WrenSignatureHandle MakeCallHandle(string signature)
 		{
 			IntPtr handlePtr = WrenImport.wrenMakeCallHandle(Ptr, signature);
@@ -158,13 +230,32 @@ namespace Wrenit
 			return handle;
 		}
 
-		/// <inheritdoc cref="WrenImport.wrenCall(IntPtr,IntPtr)"/>
+		/// <summary>
+		/// Calls <paramref name="handle"/>, using the receiver and arguments previously set up on the stack.
+		///
+		/// <para>
+		/// 	<paramref name="handle"/> must have been created by a call to <see cref="MakeCallHandle"/>. The
+		/// 	arguments to the method must be already on the stack. The receiver should be
+		/// 	in slot 0 with the remaining arguments following it, in order. It is an
+		/// 	error if the number of arguments provided does not match the method's
+		/// 	signature.
+		/// </para>
+		///
+		/// <para>
+		///		After this returns, you can access the return value from slot 0 on the stack.
+		/// </para>
+		/// </summary>
+		/// <returns>interpret result</returns>
 		public WrenInterpretResult Call(WrenSignatureHandle handle)
 		{
 			return WrenImport.wrenCall(Ptr, handle.Ptr);
 		}
 
-		/// <inheritdoc cref="WrenImport.wrenReleaseHandle(IntPtr,IntPtr)"/>
+		/// <summary>
+		/// Releases the reference stored in <paramref name="handle"/>. After calling this, <paramref name="handle"/> can
+		/// no longer be used.
+		/// </summary>
+		/// <param name="handle"></param>
 		public void ReleaseHandle(WrenHandle handle)
 		{
 			handle?.Dispose();
@@ -233,7 +324,7 @@ namespace Wrenit
 		}
 
 		/// <inheritdoc cref="WrenLoadModuleFn"/>
-		private InterlopWrenLoadModuleResult OnWrenLoadModule(IntPtr vm, string name)
+		private InteropWrenLoadModuleResult OnWrenLoadModule(IntPtr vm, string name)
 		{
 			Delegate[] list = _config.LoadModuleHandler.GetInvocationList();
 			for (int i = 0; i < list.Length; i++)
@@ -244,7 +335,7 @@ namespace Wrenit
 				if (string.IsNullOrEmpty(result)) continue;
 
 				IntPtr ptr = Marshal.StringToCoTaskMemAnsi(result);
-				return new InterlopWrenLoadModuleResult()
+				return new InteropWrenLoadModuleResult()
 				{
 					Source = ptr,
 					UserData = ptr,
@@ -252,29 +343,29 @@ namespace Wrenit
 				};
 			}
 
-			return new InterlopWrenLoadModuleResult();
+			return new InteropWrenLoadModuleResult();
 		}
 
 		/// <inheritdoc cref="WrenLoadModuleCompleteFn"/>
-		private void OnWrenLoadComplete(IntPtr vm, string name, InterlopWrenLoadModuleResult result)
+		private void OnWrenLoadComplete(IntPtr vm, string name, InteropWrenLoadModuleResult result)
 		{
 			Marshal.FreeHGlobal(result.UserData);
 		}
 
 		/// <inheritdoc cref="WrenBindForeignMethodFn"/>
-		private InterlopWrenForeignClassMethods OnWrenBindForeignClass(IntPtr vm, string module, string className)
+		private InteropWrenForeignClassMethods OnWrenBindForeignClass(IntPtr vm, string module, string className)
 		{
 			Delegate[] list = _config.BindForeignClassHandler.GetInvocationList();
 			for (int i = 0; i < list.Length; i++)
 			{
 				WrenBindForeignClass foreign = list[i] as WrenBindForeignClass;
-				WrenForeignClass @class = foreign?.Invoke(this, module, className);
-				if (@class?.Allocator == null) continue;
+				WrenForeignClassBinding classBinding = foreign?.Invoke(this, module, className);
+				if (classBinding?.Allocator == null) continue;
 
-				return new InterlopWrenForeignClassMethods()
+				return new InteropWrenForeignClassMethods()
 				{
-					AllocateFn = @class.Allocator.MethodPtr,
-					FinalizeFn = @class.Finalizer.MethodPtr,
+					AllocateFn = classBinding.Allocator.MethodPtr,
+					FinalizeFn = classBinding.Finalizer.MethodPtr,
 				};
 			}
 
@@ -283,7 +374,7 @@ namespace Wrenit
 			// resulting in a safe WrenInterpretError.RuntimeError
 			_config.ErrorHandler?.Invoke(this, WrenErrorType.WrenitRuntimeError, module, -1,
 				$"Allocator for foreign {className} not defined in bindings");
-			return new InterlopWrenForeignClassMethods()
+			return new InteropWrenForeignClassMethods()
 			{
 				AllocateFn = _notImplementedBinding.MethodPtr,
 			};
@@ -315,22 +406,50 @@ namespace Wrenit
 
 		#region Slots
 
-		/// <inheritdoc cref="WrenImport.wrenGetSlotCount(IntPtr)"/>
+		/// <summary>
+		/// Returns the number of slots available to the current foreign method.
+		/// </summary>
+		/// <returns>slot count</returns>		
 		public int GetSlotCount() => WrenImport.wrenGetSlotCount(Ptr);
 
-		/// <inheritdoc cref="WrenImport.wrenEnsureSlots"/>
+		/// <summary>
+		/// Ensures that the foreign method stack has at least <paramref name="slots"/> available for
+		/// use, growing the stack if needed.
+		///
+		/// Does not shrink the stack if it has more than enough slots.
+		///
+		/// It is an error to call this from a finalizer.
+		/// </summary>
+		/// <param name="slots">count of slots to ensure</param>
 		public void EnsureSlots(int slots) => WrenImport.wrenEnsureSlots(Ptr, slots);
 
-		/// <inheritdoc cref="WrenImport.wrenGetSlotType"/>
+		/// <summary>
+		/// Gets the type of the object in <paramref name="slot"/>
+		/// </summary>
+		/// <param name="slot">slot index</param>
+		/// <returns>resolved type</returns>
 		public WrenValueType GetSlotType(int slot) => WrenImport.wrenGetSlotType(Ptr, slot);
 
-		/// <inheritdoc cref="WrenImport.wrenGetSlotBool"/>
+		/// <summary>
+		/// Reads a boolean value from <paramref name="slot"/>.
+		/// It is an error to call this if the slot does not contain a boolean value.
+		/// </summary>
+		/// <param name="slot">slot to get</param>
 		public bool GetSlotBool(int slot) => WrenImport.wrenGetSlotBool(Ptr, slot);
 
-		/// <inheritdoc cref="WrenImport.wrenSetSlotBool"/>
+		/// <summary>
+		/// Stores the boolean <paramref name="value"/> in <paramref name="slot"/>.
+		/// </summary>
+		/// <param name="slot">slot to store int</param>
+		/// <param name="value">value to store</param>
 		public void SetSlotBool(int slot, bool value) => WrenImport.wrenSetSlotBool(Ptr, slot, value);
 
-		/// <inheritdoc cref="WrenImport.wrenGetSlotBytes"/>
+		/// <summary>
+		/// Reads a byte array from <paramref name="slot"/>.
+		///
+		/// It is an error to call this if the slot does not contain a string.
+		/// </summary>
+		/// <param name="slot">slot to get</param>
 		public byte[] GetSlotBytes(int slot)
 		{
 			IntPtr arrayPtr = WrenImport.wrenGetSlotBytes(Ptr, slot, out int length);
@@ -339,7 +458,12 @@ namespace Wrenit
 			return managedArray;
 		}
 
-		/// <inheritdoc cref="WrenImport.wrenSetSlotBytes"/>
+		/// <summary>
+		/// Stores the array of <paramref name="bytes"/> in <paramref name="slot"/>.
+		///
+		/// </summary>
+		/// <param name="slot">slot to store in</param>
+		/// <param name="bytes">bytes to store</param>
 		public void SetSlotBytes(int slot, byte[] bytes)
 		{
 			IntPtr arrayPtr = Marshal.AllocHGlobal(bytes.Length);
@@ -348,26 +472,56 @@ namespace Wrenit
 			Marshal.FreeHGlobal(arrayPtr);
 		}
 
-		/// <inheritdoc cref="WrenImport.wrenGetSlotDouble"/>
+		/// <summary>
+		/// Reads a number from <paramref name="slot"/>.
+		///
+		/// It is an error to call this if the slot does not contain a number.
+		/// </summary>
+		/// <param name="slot">slot to get</param>
 		public double GetSlotDouble(int slot) => WrenImport.wrenGetSlotDouble(Ptr, slot);
 
-		/// <inheritdoc cref="WrenImport.wrenSetSlotDouble"/>
+		/// <summary>
+		/// Stores the numeric <paramref name="value"/> in <paramref name="slot"/>.
+		/// </summary>
+		/// <param name="slot">slot to store in</param>
+		/// <param name="value">value to store</param>
 		public void SetSlotDouble(int slot, double value) => WrenImport.wrenSetSlotDouble(Ptr, slot, value);
 
-		/// <inheritdoc cref="WrenImport.wrenGetSlotString"/>
+		/// <summary>
+		/// Reads a string from <paramref name="slot"/>.
+		///
+		/// It is an error to call this if the slot does not contain a string.
+		/// </summary>
+		/// <param name="slot">slot to get</param>
 		public string GetSlotString(int slot)
 		{
 			IntPtr intPtr =  WrenImport.wrenGetSlotString(Ptr, slot);
 			return Marshal.PtrToStringAnsi(intPtr);
 		}
 
-		/// <inheritdoc cref="WrenImport.wrenGetSlotString"/>
+		/// <summary>
+		/// Stores the string <paramref name="value"/> in <paramref name="slot"/>
+		///
+		/// <para>
+		/// 	If the string may contain any null bytes in the middle, then you
+		/// 	should use <see cref="SetSlotBytes"/> instead.
+		/// </para>
+		/// </summary>
 		public void SetSlotString(int slot, string value) => WrenImport.wrenSetSlotString(Ptr, slot, value);
 
-		/// <inheritdoc cref="WrenImport.wrenSetSlotNull"/>
+		/// <summary>
+		/// Stores null in <paramref name="slot"/>.
+		/// </summary>
+		/// <param name="slot">slot to store in</param>
 		public void SetSlotNull(int slot) => WrenImport.wrenSetSlotNull(Ptr, slot);
 
-		/// <inheritdoc cref="WrenImport.wrenGetSlotHandle"/>
+		/// <summary>
+		/// Creates a handle for the value stored in <paramref name="slot"/>.
+		///
+		/// This will prevent the object that is referred to from being garbage collected
+		/// until the handle is released by calling <see cref="ReleaseHandle"/>.
+		/// </summary>
+		/// <param name="slot">slot to get</param>
 		public WrenHandle GetSlotHandle(int slot)
 		{
 			IntPtr handlePtr = WrenImport.wrenGetSlotHandle(Ptr, slot);
@@ -376,53 +530,134 @@ namespace Wrenit
 			return handle;
 		}
 
-		/// <inheritdoc cref="WrenImport.wrenSetSlotHandle"/>
+		/// <summary>
+		/// Stores the value captured in <paramref name="handle"/> in <paramref name="slot"/>.
+		///
+		/// This does not release the handle for the value.
+		/// </summary>
+		/// <param name="slot">slot to store in</param>
+		/// <param name="handle">pointer of handle to store</param>
 		public void SetSlotHandle(int slot, WrenHandle handle) => WrenImport.wrenSetSlotHandle(Ptr, slot, handle.Ptr);
 
-		/// <inheritdoc cref="WrenImport.wrenSetSlotNewList"/>
-		public void SetSlotNewList(int slot) => WrenImport.wrenSetSlotNewList(Ptr, slot);
+		#region Lists
 
-		/// <inheritdoc cref="WrenImport.wrenGetListCount"/>
+		/// <summary>
+		/// Stores a new empty list in <paramref name="slot"/>.
+		/// </summary>
+		/// <param name="slot">slot to store in</param>
+		public void SetSlotNewList(int slot) => WrenImport.wrenSetSlotNewList(Ptr, slot);
+		
+		/// <summary>
+		/// Returns the number of elements in the list stored in <paramref name="slot"/>.
+		/// </summary>
+		/// <param name="slot">slot get from</param>
+		/// <returns>count of list elements</returns>
 		public int GetListCount(int slot) => WrenImport.wrenGetListCount(Ptr, slot);
 
-		/// <inheritdoc cref="WrenImport.wrenSetListElement"/>
+		/// <summary>
+		/// Sets the value stored at <paramref name="index"/> in the list at <paramref name="listSlot"/>, 
+		/// to the value from <paramref name="elementSlot"/>. 
+		/// </summary>
+		/// <param name="listSlot">slot where the list is</param>
+		/// <param name="index">index in the list</param>
+		/// <param name="elementSlot">slot of value to store in list</param>
 		public void SetListElement(int listSlot, int index, int elementSlot) =>
 			WrenImport.wrenSetListElement(Ptr, listSlot, index, elementSlot);
 
-		/// <inheritdoc cref="WrenImport.wrenGetListElement"/>
+		/// <summary>
+		/// Reads element <paramref name="index"/> from the list in <paramref name="listSlot"/> and stores it in <paramref name="elementSlot"/>.
+		/// </summary>
+		/// <param name="listSlot">slot where the list is</param>
+		/// <param name="index">index in the list</param>
+		/// <param name="elementSlot">slot to store the value in</param>
 		public void GetListElement(int listSlot, int index, int elementSlot) =>
 			WrenImport.wrenGetListElement(Ptr, listSlot, index, elementSlot);
 
-		/// <inheritdoc cref="WrenImport.wrenInsertInList"/>
+		/// <summary>
+		/// Takes the value stored at <paramref name="elementSlot"/> and inserts it into the list stored
+		/// at <paramref name="listSlot"/> at <paramref name="index"/>.
+		///
+		/// <para>
+		/// 	As in Wren, negative indexes can be used to insert from the end. To append an element, use `-1` for the index.
+		/// </para>
+		/// </summary>
+		/// <param name="listSlot">slot where the list is</param>
+		/// <param name="index">index to store element</param>
+		/// <param name="elementSlot">slot of value to store in list</param>
 		public void InsertInList(int listSlot, int index, int elementSlot) =>
 			WrenImport.wrenInsertInList(Ptr, listSlot, index, elementSlot);
 
-		/// <inheritdoc cref="WrenImport.wrenSetSlotNewMap"/>
+		#endregion
+
+		#region Maps
+		
+		/// <summary>
+		/// Stores a new empty map in <paramref name="slot"/>.
+		/// </summary>
+		/// <param name="slot">slot to store</param>
 		public void SetSlotNewMap(int slot) => WrenImport.wrenSetSlotNewMap(Ptr, slot);
 
-		/// <inheritdoc cref="WrenImport.wrenGetMapCount"/>
+		/// <summary>
+		/// Returns the number of entries in the map stored in <paramref name="slot"/>.
+		/// </summary>
+		/// <param name="slot">slot to look at</param>
+		/// <returns>count of entries</returns>
 		public int GetMapCount(int slot) => WrenImport.wrenGetMapCount(Ptr, slot);
-
-		/// <inheritdoc cref="WrenImport.wrenGetMapContainsKey"/>
+		
+		/// <summary>
+		/// Returns true if the key in <paramref name="keySlot"/> is found in the map placed in <paramref name="mapSlot"/>.
+		/// </summary>
+		/// <param name="mapSlot">slot where the map is</param>
+		/// <param name="keySlot">slot of value to check exists</param>
 		public bool GetMapContainsKey(int mapSlot, int keySlot) => WrenImport.wrenGetMapContainsKey(Ptr, mapSlot, keySlot);
 
-		/// <inheritdoc cref="WrenImport.wrenGetMapValue"/>
+		/// <summary>
+		/// Retrieves a value with the key in <paramref name="keySlot"/> from the map in <paramref name="mapSlot"/> and
+		/// stores it in <paramref name="valueSlot"/>.
+		/// </summary>
+		/// <param name="mapSlot">slot where the map is</param>
+		/// <param name="keySlot">slot of the key</param>
+		/// <param name="valueSlot">slot to store the value in</param>
 		public void GetMapValue(int mapSlot, int keySlot, int valueSlot) =>
 			WrenImport.wrenGetMapValue(Ptr, mapSlot, keySlot, valueSlot);
 
-		/// <inheritdoc cref="WrenImport.wrenSetMapValue"/>
+		/// <summary>
+		/// Takes the value stored at <paramref name="valueSlot"/> and inserts it into the map stored
+		/// at <paramref name="mapSlot"/> with key <paramref name="keySlot"/>.
+		/// </summary>
+		/// <param name="mapSlot">slot where map is</param>
+		/// <param name="keySlot">slot of the key to store in</param>
+		/// <param name="valueSlot">slot of the value to store</param>
 		public void SetMapValue(int mapSlot, int keySlot, int valueSlot) =>
 			WrenImport.wrenSetMapValue(Ptr, mapSlot, keySlot, valueSlot);
 
-		/// <inheritdoc cref="WrenImport.wrenRemoveMapValue"/>
+		/// <summary>
+		/// Removes a value from the map in <paramref name="mapSlot"/>, with the key from <paramref name="keySlot"/>,
+		/// and place it in <paramref name="removedValueSlot"/>. If not found, <paramref name="removedValueSlot"/> is
+		/// set to null, the same behaviour as the Wren Map API.
+		/// </summary>
+		/// <param name="mapSlot">slot where the map is</param>
+		/// <param name="keySlot">slot of the key to remove</param>
+		/// <param name="removedValueSlot">slot to store value that was removed</param>
 		public void RemoveMapValue(int mapSlot, int keySlot, int removedValueSlot) =>
 			WrenImport.wrenRemoveMapValue(Ptr, mapSlot, keySlot, removedValueSlot);
 
-		/// <inheritdoc cref="WrenImport.wrenRemoveMapValue"/>
-		public void GetVariable(string module, string name, int slot) =>
-			WrenImport.wrenGetVariable(Ptr, module, name, slot);
+		#endregion
 
-		/// <inheritdoc cref="WrenImport.wrenSetSlotNewForeign"/>
+		/// <summary>
+		/// Creates a new instance of the foreign class stored in <paramref name="classSlot"/>
+		/// and places the resulting object in <paramref name="slot"/>.
+		///
+		/// <para>
+		/// 	This does not invoke the foreign class's constructor on the new instance. If
+		/// 	you need that to happen, call the constructor from Wren, which will then
+		/// 	call the allocator foreign method. In there, call this to create the object
+		/// 	and then the constructor will be invoked when the allocator returns.
+		/// </para>
+		///
+		/// </summary>
+		/// <param name="slot">slot to get</param>
+		/// <param name="classSlot">slot to store in</param>
 		public void SetSlotNewForeign<T>(int slot, int classSlot)
 		{
 			IntPtr id = _unusedForeignIds.Count > 0 ? _unusedForeignIds.Dequeue() : new IntPtr(_lastForeignId++);
@@ -434,7 +669,14 @@ namespace Wrenit
 			Marshal.WriteIntPtr(ptr, IntPtr.Size, id);
 		}
 
-		/// <inheritdoc cref="WrenImport.wrenGetSlotForeign"/>
+		/// <summary>
+		/// Reads a foreign object from <paramref name="slot"/>
+		///
+		/// It is an error to call this if the slot does not contain an instance of a
+		/// foreign class.
+		/// </summary>
+		/// <param name="slot">slot to get</param>
+		/// <returns>the foreign object</returns>
 		public WrenForeignObject GetSlotForeign(int slot)
 		{
 			IntPtr ptr = WrenImport.wrenGetSlotForeign(Ptr, slot);
@@ -443,32 +685,48 @@ namespace Wrenit
 
 			return obj;
 		}
-
+		
+		/// <summary>
+		/// Reads a foreign object from <paramref name="slot"/>
+		///
+		/// It is an error to call this if the slot does not contain an instance of a
+		/// foreign class.
+		/// </summary>
+		/// <param name="slot">slot to get</param>
+		/// <returns>the foreign object</returns>
 		public WrenForeignObject<T> GetSlotForeign<T>(int slot) => GetSlotForeign(slot) as WrenForeignObject<T>;
 
-		/// <inheritdoc cref="WrenImport.wrenHasVariable"/>
-		public bool HasVariable(IntPtr vm, string module, string name) => WrenImport.wrenHasVariable(Ptr, module, name);
+		/// <summary>
+		/// Looks up the top level variable with <paramref name="name"/> in resolved <paramref name="module"/> and stores
+		/// it in <paramref name="slot"/>.
+		/// </summary>
+		/// <param name="module">module to check in</param>
+		/// <param name="name">name to get</param>
+		/// <param name="slot">slot to store in</param>
+		public void GetVariable(string module, string name, int slot) =>
+			WrenImport.wrenGetVariable(Ptr, module, name, slot);
+		
+		/// <summary>
+		/// Looks up the top level variable with <paramref name="name"/> in resolved <paramref name="module"/>, 
+		/// returns false if not found. The module must be imported at the time, 
+		/// use <see cref="HasModule"/>  to ensure that before calling.
+		/// </summary>
+		/// <param name="module">module to check in</param>
+		/// <param name="name">name to check for</param>
+		public bool HasVariable(string module, string name) => WrenImport.wrenHasVariable(Ptr, module, name);
 
-		/// <inheritdoc cref="WrenImport.wrenHasModule"/>
-		public bool HasModule(IntPtr vm, string module) => WrenImport.wrenHasModule(Ptr, module);
+		/// <summary>
+		/// Returns true if <paramref name="module"/> has been imported/resolved before, false if not.
+		/// </summary>
+		/// <param name="module">module to check</param>
+		public bool HasModule(string module) => WrenImport.wrenHasModule(Ptr, module);
 
-		/// <inheritdoc cref="WrenImport.wrenAbortFiber"/>
+		/// <summary>
+		/// Sets the current fiber to be aborted, and uses the value in <paramref name="slot"/> as the runtime error object.
+		/// </summary>
+		/// <param name="slot">slot for the runtime error</param>
 		public void AbortFiber(int slot) => WrenImport.wrenAbortFiber(Ptr, slot);
 
 		#endregion
-
-		internal void FreeForeignObject(IntPtr id)
-		{
-			if (_foreignObjects.ContainsKey(id) == false) return;
-
-			_foreignObjects.Remove(id);
-			_unusedForeignIds.Enqueue(id);
-		}
-
-		internal void FreeHandle(IntPtr handlePtr)
-		{
-			_handles.Remove(handlePtr);
-			WrenImport.wrenReleaseHandle(Ptr, handlePtr);
-		}
 	}
 }
