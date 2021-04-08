@@ -308,8 +308,8 @@ namespace Wrenit
 			IntPtr unmanagedName = Marshal.StringToHGlobalAnsi(resolved);
 			UIntPtr size = new UIntPtr((uint) (resolved.Length + 1) * (uint) IntPtr.Size);
 
-			// 2. create pointer in wren managed memory 
-			IntPtr ptr = WrenImport.wrenReallocate(Ptr, IntPtr.Zero, UIntPtr.Zero, size);
+			// 2. create pointer using same allocator that wren uses 
+			IntPtr ptr = WrenConfig.DefaultReallocateFn.Invoke(IntPtr.Zero, size, IntPtr.Zero);
 
 			// 3. copy char* string over
 			unsafe

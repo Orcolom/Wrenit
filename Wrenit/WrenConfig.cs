@@ -17,7 +17,11 @@ namespace Wrenit
 		/// has a cached version of the defaults
 		/// </summary>
 		private static bool _hasDefaults;
+		
+		/// <inheritdoc cref="InteropWrenConfiguration.ReallocateFn"/>
+		internal static WrenReallocateFn DefaultReallocateFn; 
 
+		
 		/// <inheritdoc cref="InteropWrenConfiguration.InitialHeapSize"/>
 		public ulong InitialHeapSize;
 
@@ -131,6 +135,8 @@ namespace Wrenit
 			InteropWrenConfiguration wrenConfig = new InteropWrenConfiguration();
 			WrenImport.wrenInitConfiguration(wrenConfig);
 
+			DefaultReallocateFn = wrenConfig.ReallocateFn;
+			
 			_hasDefaults = true;
 			_default = new WrenConfig()
 			{

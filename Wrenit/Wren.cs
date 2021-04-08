@@ -35,10 +35,14 @@ namespace Wrenit
 			int major = ((version - (minor * 1000) - patch) / 1000000) % 1000;
 
 			_didInitializeCheck = true;
-			if (version == WrenVersionNumber) return true;
+			if (version != WrenVersionNumber) 
+				throw new NotSupportedException(
+					$"{DllName} with version {major}.{minor}.{patch} is not supported. Dll with version {WrenVersionString} needed");
 
-			throw new NotSupportedException(
-				$"{DllName} with version {major}.{minor}.{patch} is not supported. Dll with version {WrenVersionString} needed");
+			// load in defaults from unmanaged code, if not already done
+			WrenConfig.GetDefaults();
+			
+			return true;
 		}
 
 		/// <summary>

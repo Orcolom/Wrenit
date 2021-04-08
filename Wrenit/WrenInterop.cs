@@ -60,39 +60,6 @@ namespace Wrenit.Interop
 		internal static extern void wrenCollectGarbage(IntPtr vm);
 
 		/// <summary>
-		/// A generic allocation function that handles all explicit memory management.
-		///	
-		/// <para>
-		///		It's used like so:
-		/// </para>
-		/// <para>
-		///		- To allocate new memory, <paramref name="memory"/> is null and <paramref name="oldSize"/> is zero.
-		///			It should return the allocated memory or null on failure.
-		/// </para>
-		/// <para>
-		///		- To attempt to grow an existing allocation, <paramref name="memory"/> is the memory,
-		///			<paramref name="oldSize"/> is its previous size, and <paramref name="newSize"/> is the desired size.
-		///			It should return <paramref name="memory"/> if it was able to grow it in place, or a new pointer if it had to move it.
-		/// </para>
-		/// <para>
-		///		- To shrink memory, <paramref name="memory"/>, <paramref name="oldSize"/>,
-		///			and <paramref name="newSize"/> are the same as above but it will always return <paramref name="memory"/>.
-		/// </para>
-		/// <para>
-		///		- To free memory, <paramref name="memory"/> will be the memory to free
-		///			and <paramref name="newSize"/> and <paramref name="oldSize"/> will be zero. It should return null.
-		/// </para>
-		/// 
-		/// </summary>
-		/// <param name="vm">pointer to c vm</param>
-		/// <param name="memory">pointer to the memory</param>
-		/// <param name="oldSize">old size as <see cref="UIntPtr"/></param>
-		/// <param name="newSize">old size as <see cref="UIntPtr"/></param>
-		/// <returns>pointer depending on input</returns>
-		[DllImport(Wren.DllName)]
-		internal static extern IntPtr wrenReallocate(IntPtr vm, IntPtr memory, UIntPtr oldSize, UIntPtr newSize);
-
-		/// <summary>
 		/// Runs <paramref name="source"/>, a string of Wren source code in a new fiber in <paramref name="vm"/> in the context of resolved <paramref name="module"/>.
 		/// </summary>
 		/// <param name="vm">pointer to c vm</param>
@@ -509,6 +476,23 @@ namespace Wrenit.Interop
 
 	#region Types/Delegates
 
+	// A generic allocation function that handles all explicit memory management
+	// used by Wren. It's used like so:
+	//
+	// - To allocate new memory, [memory] is NULL and [newSize] is the desired
+	//   size. It should return the allocated memory or NULL on failure.
+	//
+	// - To attempt to grow an existing allocation, [memory] is the memory, and
+	//   [newSize] is the desired size. It should return [memory] if it was able to
+	//   grow it in place, or a new pointer if it had to move it.
+	//
+	// - To shrink memory, [memory] and [newSize] are the same as above but it will
+	//   always return [memory].
+	//
+	// - To free memory, [memory] will be the memory to free and [newSize] will be
+	//   zero. It should return NULL.
+	internal delegate IntPtr WrenReallocateFn(IntPtr memory, UIntPtr newSize, IntPtr userData);
+	
 	/// <summary>
 	/// display text to the user
 	/// </summary>
@@ -685,14 +669,9 @@ namespace Wrenit.Interop
 		/// <summary>
 		///		The callback Wren will use to allocate, reallocate, and deallocate memory.
 		///		If `null`, defaults to a built-in function that uses `realloc` and `free`.
-		///
-		///		<remarks>
-		///			Wrenit doesn't give a custom Reallocate function. here for struct layout
-		///		</remarks>
 		/// </summary>
-		#pragma warning disable 649
-		public IntPtr ReallocateFn;
-		#pragma warning restore 649
+		[MarshalAs(UnmanagedType.FunctionPtr)]
+		public WrenReallocateFn ReallocateFn;
 
 		/// <inheritdoc cref="WrenResolveModuleFn"/>
 		[MarshalAs(UnmanagedType.FunctionPtr)]
