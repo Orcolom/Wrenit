@@ -34,6 +34,8 @@ namespace Wrenit
 		/// </summary>
 		private readonly IntPtr _id;
 
+		public bool IsAlive => _id != IntPtr.Zero;
+
 		/// <summary>
 		/// the data in the foreign object
 		/// </summary>
@@ -61,7 +63,6 @@ namespace Wrenit
 		public void Dispose()
 		{
 			Free();
-			GC.SuppressFinalize(this);
 		}
 
 		/// <summary>
@@ -69,6 +70,8 @@ namespace Wrenit
 		/// </summary>
 		private void Free()
 		{
+			if (IsAlive == false) return;
+
 			if (_vm.TryGetTarget(out WrenVm vm))
 			{
 				Free(vm);

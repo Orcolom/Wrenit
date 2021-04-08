@@ -73,8 +73,9 @@ namespace Wrenit.Utilities
 		/// bind the module to the config's <see cref="WrenConfig.BindForeignMethodHandler"/> and <see cref="WrenConfig.BindForeignClassHandler"/>
 		/// </summary>
 		/// <param name="config"></param>
-		public void Bind(WrenConfig config)
+		public void Bind(ref WrenConfig config)
 		{
+			config.LoadModuleHandler += LoadModuleHandler;
 			config.BindForeignMethodHandler += BindForeignMethodHandler;
 			config.BindForeignClassHandler += BindForeignClassHandler;
 		}
@@ -83,10 +84,16 @@ namespace Wrenit.Utilities
 		/// unbind the module from the config's <see cref="WrenConfig.BindForeignMethodHandler"/> and <see cref="WrenConfig.BindForeignClassHandler"/>
 		/// </summary>
 		/// <param name="config"></param>
-		public void UnBind(WrenConfig config)
+		public void UnBind(ref WrenConfig config)
 		{
+			config.LoadModuleHandler -= LoadModuleHandler;
 			config.BindForeignMethodHandler -= BindForeignMethodHandler;
 			config.BindForeignClassHandler -= BindForeignClassHandler;
+		}
+
+		private string LoadModuleHandler(WrenVm vm, string name)
+		{
+			return Name == name ? Source : null;
 		}
 
 		/// <inheritdoc cref="WrenConfig.BindForeignClassHandler"/>

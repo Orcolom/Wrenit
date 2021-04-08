@@ -39,7 +39,6 @@ namespace Wrenit
 		public void Dispose()
 		{
 			Free();
-			GC.SuppressFinalize(this);
 		}
 
 		public void Free(WrenVm vm)
@@ -52,6 +51,8 @@ namespace Wrenit
 
 		private void Free()
 		{
+			if (IsAlive == false) return;
+
 			if (_vm.TryGetTarget(out WrenVm vm))
 			{
 				Free(vm);

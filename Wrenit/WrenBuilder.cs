@@ -59,9 +59,9 @@ namespace Wrenit.Utilities
 			{MethodType.FieldSetter, new Signature("{1}=({2})", (1, 1))},
 			{
 				MethodType.SubScriptSetter,
-				new Signature("[{2}]=({0})", (0, -1), customValue: implement => implement ? "value" : "_")
+				new Signature("[{2}]=({0})", (1, -1), customValue: implement => implement ? "value" : "_")
 			},
-			{MethodType.SubScriptGetter, new Signature("[{2}]", (0, -1))},
+			{MethodType.SubScriptGetter, new Signature("[{2}]", (1, -1))},
 		};
 
 		private Signature(string format, (int, int) arguments, string customName = null,
@@ -187,6 +187,8 @@ namespace Wrenit.Utilities
 
 	public static class WrenBuilder
 	{
+		private static Dictionary<Type, WrenModule> _modules = new Dictionary<Type, WrenModule>();
+		
 		private static T GetAttribute<T>(this MemberInfo info)
 			where T : Attribute
 		{
@@ -217,6 +219,11 @@ namespace Wrenit.Utilities
 		public static WrenModule Build<T>()
 		{
 			Type moduleType = typeof(T);
+			if (_modules.ContainsKey(moduleType))
+			{
+				return _modules[moduleType];
+			}
+			
 			WrenModuleAttribute moduleAttribute = moduleType.GetAttribute<WrenModuleAttribute>();
 			if (moduleAttribute == null) return null;
 
@@ -242,7 +249,9 @@ namespace Wrenit.Utilities
 			}
 
 			string source = sb.ToString();
-			return new WrenModule(moduleAttribute.Name ?? moduleType.Name, source, classes);
+			WrenModule module = new WrenModule(moduleAttribute.Name ?? moduleType.Name, source, classes);
+			_modules.Add(moduleType, module);
+			return module;
 		}
 
 		private static WrenClass BuildClass(Type classType, WrenClassAttribute classAttribute, StringBuilder sb)

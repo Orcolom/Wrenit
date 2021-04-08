@@ -104,7 +104,6 @@ namespace Wrenit
 		public void Dispose()
 		{
 			Free();
-			GC.SuppressFinalize(this);
 		}
 
 		/// <summary>
@@ -123,11 +122,11 @@ namespace Wrenit
 			handles.Clear();
 
 			// copy foreign dictionary so they can safely be discarded
-			Dictionary<IntPtr, WrenForeignObject> foreignObjects = new Dictionary<IntPtr, WrenForeignObject>(_foreignObjects);
-			foreach (var pair in foreignObjects)
-			{
-				pair.Value.Free(this);
-			}
+			// Dictionary<IntPtr, WrenForeignObject> foreignObjects = new Dictionary<IntPtr, WrenForeignObject>(_foreignObjects);
+			// foreach (var pair in foreignObjects)
+			// {
+			// 	pair.Value.Free(this);
+			// }
 
 			_foreignObjects.Clear();
 
@@ -660,7 +659,7 @@ namespace Wrenit
 		/// <param name="classSlot">slot to store in</param>
 		public void SetSlotNewForeign<T>(int slot, int classSlot)
 		{
-			IntPtr id = _unusedForeignIds.Count > 0 ? _unusedForeignIds.Dequeue() : new IntPtr(_lastForeignId++);
+			IntPtr id = _unusedForeignIds.Count > 0 ? _unusedForeignIds.Dequeue() : new IntPtr(++_lastForeignId);
 
 			WrenForeignObject wrenForeignObject = new WrenForeignObject<T>(this, id);
 			_foreignObjects.Add(id, wrenForeignObject);
