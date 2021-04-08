@@ -57,11 +57,8 @@ namespace Wrenit
 		public static string CreateSignature(MethodType type, string name, int argumentCount, SignatureStyle style = SignatureStyle.Signature)
 		{
 			Signature signature = Signature.Signatures[type];
-			if (signature.Arguments != -1)
-			{
-				argumentCount = argumentCount > signature.Arguments ? signature.Arguments : argumentCount;
-			}
-
+			
+			argumentCount = CorrectArgumentCount(type, argumentCount);
 			string arguments = CreateArgumentList(argumentCount, style != SignatureStyle.Signature);
 
 			if (string.IsNullOrEmpty(signature.ForcedName) == false)
@@ -88,13 +85,17 @@ namespace Wrenit
 		internal static int CorrectArgumentCount(MethodType type, int count)
 		{
 				Signature signature = Signature.Signatures[type];
-				if (signature.Arguments != -1)
+
+				if (count < signature.Arguments.Item1) count = signature.Arguments.Item1;
+				
+				if (signature.Arguments.Item2 != -1)
 				{
-					return count > signature.Arguments ? signature.Arguments : count;
+					return count > signature.Arguments.Item2 ? signature.Arguments.Item2 : count;
 				}
 
 				return count;
 		}
+		
 		/// <summary>
 		/// creates an argument list string 
 		/// </summary>

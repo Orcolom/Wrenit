@@ -9,7 +9,7 @@ namespace Wrenit.Consoles
 		public double y;
 	}
 
-	[WrenModule(WrenSource, Name = "Math")]
+	[WrenModule("Math")]
 	public class WrenMath
 	{
 		private const string WrenSource =
@@ -18,7 +18,13 @@ namespace Wrenit.Consoles
 				foreign add(a,b,c)
 			}
 		";
-			
+
+		[WrenRawSource]
+		private static string Raw1()
+		{
+			return "var hello = \"hello\"";
+		}
+
 		[WrenClass]
 		public class Vector
 		{
@@ -28,6 +34,16 @@ namespace Wrenit.Consoles
 			[WrenFinalizer]
 			public static void Fin(WrenForeignObject data) { }
 
+			
+			[WrenRawSource]
+			private static string Raw1()
+			{
+				return " static Two(a,b) { 2 } ";
+			}
+
+			[WrenMethod(MethodType.Construct, 1)]
+			public static void Con(WrenVm vm) { }
+			
 			[WrenMethod(MethodType.Method, "Add", 1)]
 			public static void AddNumber(WrenVm vm) { }
 
@@ -42,6 +58,18 @@ namespace Wrenit.Consoles
 
 			[WrenMethod(MethodType.FieldSetter, "x")]
 			public static void SetX(WrenVm vm) { }
+			
+			[WrenMethod(MethodType.Inverse)]
+			public static void Inv(WrenVm vm) { }
+			
+			[WrenMethod(MethodType.SubScriptGetter, argumentCount: 2)]
+			public static void Subscript(WrenVm vm) { }
+			
+			[WrenMethod(MethodType.SubScriptSetter, argumentCount: 2)]
+			public static void SubscriptX(WrenVm vm) { }
+			
+			[WrenMethod(MethodType.Plus)]
+			public static void Plus(WrenVm vm) { }
 		}
 	}
 }

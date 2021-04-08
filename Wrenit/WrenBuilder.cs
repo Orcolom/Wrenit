@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Wrenit.Utilities
 {
 	struct Signature
 	{
-		public readonly int Arguments;
+		public readonly (int, int) Arguments;
 		public readonly string Format;
 		public readonly string ForcedName;
 		public readonly Func<bool, string> CustomValue;
@@ -21,47 +24,48 @@ namespace Wrenit.Utilities
 
 		public static readonly Dictionary<MethodType, Signature> Signatures = new Dictionary<MethodType, Signature>()
 		{
-			{MethodType.Method, new Signature(FormatNameArg, -1)},
+			{MethodType.Method, new Signature(FormatNameArg, (0, -1))},
 			{
 				MethodType.StaticMethod,
-				new Signature(FormatCustomNameArg, -1, customValue: implement => implement ? "static" : "")
+				new Signature(FormatCustomNameArg, (0, -1), customValue: implement => implement ? "static" : "")
 			},
 			{
 				MethodType.Construct,
-				new Signature(FormatCustomNameArg, -1, customValue: implement => implement ? "construct" : "init")
+				new Signature(FormatCustomNameArg, (0, -1), customValue: implement => implement ? "construct" : "init")
 			},
-			{MethodType.RangeInclusive, new Signature(FormatNameArg, 1, "..")},
-			{MethodType.RangeExclusive, new Signature(FormatNameArg, 1, "...")},
-			{MethodType.Times, new Signature(FormatNameArg, 1, "*")},
-			{MethodType.Divide, new Signature(FormatNameArg, 1, "/")},
-			{MethodType.Modulo, new Signature(FormatNameArg, 1, "%")},
-			{MethodType.Plus, new Signature(FormatNameArg, 1, "+")},
-			{MethodType.Minus, new Signature(FormatNameArg, 1, "-")},
-			{MethodType.BitwiseLeftShift, new Signature(FormatNameArg, 1, "<<")},
-			{MethodType.BitwiseRightShift, new Signature(FormatNameArg, 1, ">>")},
-			{MethodType.BitwiseXor, new Signature(FormatNameArg, 1, "^")},
-			{MethodType.BitwiseOr, new Signature(FormatNameArg, 1, "|")},
-			{MethodType.BitwiseAnd, new Signature(FormatNameArg, 1, "&")},
-			{MethodType.SmallerThen, new Signature(FormatNameArg, 1, "<")},
-			{MethodType.SmallerEqualThen, new Signature(FormatNameArg, 1, "<=")},
-			{MethodType.BiggerThen, new Signature(FormatNameArg, 1, ">")},
-			{MethodType.BiggerEqualThen, new Signature(FormatNameArg, 1, ">=")},
-			{MethodType.Equal, new Signature(FormatNameArg, 1, "==")},
-			{MethodType.NotEqual, new Signature(FormatNameArg, 1, "!=")},
-			{MethodType.Is, new Signature(FormatNameArg, 1, "is")},
-			{MethodType.FieldGetter, new Signature(FormatName, 0)},
-			{MethodType.Inverse, new Signature(FormatName, 0, "-")},
-			{MethodType.Not, new Signature(FormatName, 0, "!")},
-			{MethodType.Tilda, new Signature(FormatName, 0, "~")},
-			{MethodType.FieldSetter, new Signature("{1}=({2})", 1)},
+			{MethodType.RangeInclusive, new Signature(FormatNameArg, (1, 1), "..")},
+			{MethodType.RangeExclusive, new Signature(FormatNameArg, (1, 1), "...")},
+			{MethodType.Times, new Signature(FormatNameArg, (1, 1), "*")},
+			{MethodType.Divide, new Signature(FormatNameArg, (1, 1), "/")},
+			{MethodType.Modulo, new Signature(FormatNameArg, (1, 1), "%")},
+			{MethodType.Plus, new Signature(FormatNameArg, (1, 1), "+")},
+			{MethodType.Minus, new Signature(FormatNameArg, (1, 1), "-")},
+			{MethodType.BitwiseLeftShift, new Signature(FormatNameArg, (1, 1), "<<")},
+			{MethodType.BitwiseRightShift, new Signature(FormatNameArg, (1, 1), ">>")},
+			{MethodType.BitwiseXor, new Signature(FormatNameArg, (1, 1), "^")},
+			{MethodType.BitwiseOr, new Signature(FormatNameArg, (1, 1), "|")},
+			{MethodType.BitwiseAnd, new Signature(FormatNameArg, (1, 1), "&")},
+			{MethodType.SmallerThen, new Signature(FormatNameArg, (1, 1), "<")},
+			{MethodType.SmallerEqualThen, new Signature(FormatNameArg, (1, 1), "<=")},
+			{MethodType.BiggerThen, new Signature(FormatNameArg, (1, 1), ">")},
+			{MethodType.BiggerEqualThen, new Signature(FormatNameArg, (1, 1), ">=")},
+			{MethodType.Equal, new Signature(FormatNameArg, (1, 1), "==")},
+			{MethodType.NotEqual, new Signature(FormatNameArg, (1, 1), "!=")},
+			{MethodType.Is, new Signature(FormatNameArg, (1, 1), "is")},
+			{MethodType.FieldGetter, new Signature(FormatName, (0, 0))},
+			{MethodType.Inverse, new Signature(FormatName, (0, 0), "-")},
+			{MethodType.Not, new Signature(FormatName, (0, 0), "!")},
+			{MethodType.Tilda, new Signature(FormatName, (0, 0), "~")},
+			{MethodType.FieldSetter, new Signature("{1}=({2})", (1, 1))},
 			{
 				MethodType.SubScriptSetter,
-				new Signature("[{2}]=({0})", -1, customValue: implement => implement ? "value" : "_")
+				new Signature("[{2}]=({0})", (0, -1), customValue: implement => implement ? "value" : "_")
 			},
-			{MethodType.SubScriptGetter, new Signature("[{2}]", -1)},
+			{MethodType.SubScriptGetter, new Signature("[{2}]", (0, -1))},
 		};
 
-		private Signature(string format, int arguments, string customName = null, Func<bool, string> customValue = null)
+		private Signature(string format, (int, int) arguments, string customName = null,
+			Func<bool, string> customValue = null)
 		{
 			ForcedName = customName;
 			Arguments = arguments;
@@ -76,7 +80,7 @@ namespace Wrenit.Utilities
 		Implementation,
 		ForeignImplementation,
 	}
-	
+
 	public enum MethodType
 	{
 		Method, // foo()
@@ -117,20 +121,23 @@ namespace Wrenit.Utilities
 		Is,
 	}
 
+	public abstract class AWrenAttribute : Attribute { }
+
 	[AttributeUsage(AttributeTargets.Class)]
-	public class WrenModuleAttribute : Attribute
+	public class WrenModuleAttribute : AWrenAttribute
 	{
 		public string Name;
-		public readonly string Source;
 
-		public WrenModuleAttribute(string source)
+		public WrenModuleAttribute() { }
+
+		public WrenModuleAttribute(string name)
 		{
-			Source = source;
+			Name = name;
 		}
 	}
 
 	[AttributeUsage(AttributeTargets.Class)]
-	public class WrenClassAttribute : Attribute
+	public class WrenClassAttribute : AWrenAttribute
 	{
 		public readonly string Name;
 
@@ -143,19 +150,32 @@ namespace Wrenit.Utilities
 	}
 
 	[AttributeUsage(AttributeTargets.Method)]
-	public class WrenAllocatorAttribute : Attribute { }
+	public class WrenAllocatorAttribute : AWrenAttribute { }
 
 	[AttributeUsage(AttributeTargets.Method)]
-	public class WrenFinalizerAttribute : Attribute { }
+	public class WrenFinalizerAttribute : AWrenAttribute { }
 
 	[AttributeUsage(AttributeTargets.Method)]
-	public class WrenRawSourceAttribute : Attribute { }
+	public class WrenRawSourceAttribute : AWrenAttribute { }
 
-	public class WrenMethodAttribute : Attribute
+	[AttributeUsage(AttributeTargets.Method)]
+	public class WrenMethodAttribute : AWrenAttribute
 	{
 		public readonly string Name;
 		public readonly int ArgumentCount;
 		public readonly MethodType Type;
+
+		public WrenMethodAttribute(MethodType type)
+		{
+			ArgumentCount = 0;
+			Type = type;
+		}
+
+		public WrenMethodAttribute(MethodType type, int argumentCount = 0)
+		{
+			ArgumentCount = Wren.CorrectArgumentCount(type, argumentCount);
+			Type = type;
+		}
 
 		public WrenMethodAttribute(MethodType type, string name = null, int argumentCount = 0)
 		{
@@ -167,10 +187,31 @@ namespace Wrenit.Utilities
 
 	public static class WrenBuilder
 	{
-		private static T GetAttribute<T>(this Type type)
+		private static T GetAttribute<T>(this MemberInfo info)
 			where T : Attribute
 		{
-			return type.GetCustomAttribute(typeof(T)) as T;
+			return info.GetCustomAttribute(typeof(T)) as T;
+		}
+
+		private static List<T> GetAttributes<T>(this MemberInfo info)
+			where T : Attribute
+		{
+			return info.GetCustomAttributes<T>().ToList();
+		}
+
+		private static List<(MemberInfo, AWrenAttribute)> GetAttributedMembers(this Type type)
+		{
+			MemberInfo[] members = type.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+
+			List<(MemberInfo, AWrenAttribute)> found = new List<(MemberInfo, AWrenAttribute)>();
+
+			for (int i = 0; i < members.Length; i++)
+			{
+				List<AWrenAttribute> attributes = members[i].GetAttributes<AWrenAttribute>();
+				if (attributes != null && attributes.Count != 0) found.Add((members[i], attributes[0]));
+			}
+
+			return found;
 		}
 
 		public static WrenModule Build<T>()
@@ -178,79 +219,104 @@ namespace Wrenit.Utilities
 			Type moduleType = typeof(T);
 			WrenModuleAttribute moduleAttribute = moduleType.GetAttribute<WrenModuleAttribute>();
 			if (moduleAttribute == null) return null;
-			if (string.IsNullOrEmpty(moduleAttribute.Source)) return null;
 
-			List<WrenClass> _classes = new List<WrenClass>();
-			Type[] nestedTypes = moduleType.GetNestedTypes();
+			StringBuilder sb = new StringBuilder();
+			sb.Append("// auto generated by wrenit \n\n");
 
-			for (int i = 0; i < nestedTypes.Length; i++)
+			List<WrenClass> classes = new List<WrenClass>();
+
+			List<(MemberInfo, AWrenAttribute)> members = moduleType.GetAttributedMembers();
+
+			for (int i = 0; i < members.Count; i++)
 			{
-				Type classType = nestedTypes[i];
-				WrenClassAttribute classAttribute = classType.GetAttribute<WrenClassAttribute>();
-				if (classAttribute == null) continue;
+				switch (members[i].Item2)
+				{
+					case WrenClassAttribute classAttribute:
+						classes.Add(BuildClass(members[i].Item1 as Type, classAttribute, sb));
+						break;
 
-				WrenClass wrenClass = BuildClass(classType, classAttribute);
-				if (wrenClass != null) _classes.Add(wrenClass);
+					case WrenRawSourceAttribute rawSourceAttribute:
+						HandleManualSource(members[i].Item1 as MethodInfo, sb);
+						break;
+				}
 			}
 
-			return new WrenModule(moduleAttribute.Name ?? moduleType.Name, moduleAttribute.Source, _classes);
+			string source = sb.ToString();
+			return new WrenModule(moduleAttribute.Name ?? moduleType.Name, source, classes);
 		}
 
-		private static WrenClass BuildClass(Type classType, WrenClassAttribute classAttribute)
+		private static WrenClass BuildClass(Type classType, WrenClassAttribute classAttribute, StringBuilder sb)
 		{
-			MethodInfo[] methodInfos =
-				classType.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+			List<(MemberInfo, AWrenAttribute)> attributedMembers = classType.GetAttributedMembers();
 
-			WrenForeignMethod allocator = null;
-			WrenFinalizer finalizer = null;
+			(MemberInfo, AWrenAttribute) validAlloc = attributedMembers.Find(tuple =>
+				tuple.Item2 is WrenAllocatorAttribute && IsValidMethodSignature(tuple.Item1 as MethodInfo));
+
+			(MemberInfo, AWrenAttribute) validFin = attributedMembers.Find(tuple =>
+				tuple.Item2 is WrenFinalizerAttribute && IsValidFInalizerSignature(tuple.Item1 as MethodInfo));
+
+			string className = classAttribute.Name ?? classType.Name;
+
+			if (validAlloc.Item1 != null)
+			{
+				sb.Append("foreign ");
+			}
+
+			sb.Append($"class {className} {{\n");
+
 			List<WrenMethod> methods = new List<WrenMethod>();
 			List<WrenMethodAttribute> methodAttributes = new List<WrenMethodAttribute>();
 
-			for (int i = 0; i < methodInfos.Length; i++)
+			WrenForeignMethod allocator = null;
+			WrenFinalizer finalizer = null;
+			if (validAlloc.Item1 != null)
 			{
-				var methodInfo = methodInfos[i];
-
-				if (allocator == null)
-				{
-					WrenAllocatorAttribute newAlloc = methodInfo.GetCustomAttribute<WrenAllocatorAttribute>();
-					if (newAlloc != null)
-					{
-						if (IsValidCSharpSignature(methodInfo))
-						{
-							allocator = Delegate.CreateDelegate(typeof(WrenForeignMethod), methodInfo) as WrenForeignMethod;
-						}
-
-						continue;
-					}
-				}
-
-				if (finalizer == null)
-				{
-					WrenFinalizerAttribute newFin = methodInfo.GetCustomAttribute<WrenFinalizerAttribute>();
-					if (newFin != null)
-					{
-						if (IsValidCSharpSignature(methodInfo, true))
-						{
-							finalizer = Delegate.CreateDelegate(typeof(WrenFinalizer), methodInfo) as WrenFinalizer;
-						}
-
-						continue;
-					}
-				}
-
-				WrenMethodAttribute methodAttribute = methodInfo.GetCustomAttribute<WrenMethodAttribute>();
-				if (IsValidCSharpSignature(methodInfo) == false) continue;
-
-				string name = methodAttribute.Name ?? methodInfo.Name;
-				if (IsOriginalAttribute(methodAttributes, methodAttribute, name) == false) continue;
-
-				methodAttributes.Add(methodAttribute);
-
-				WrenMethod wrenMethod = new WrenMethod(methodAttribute.Type, name, methodAttribute.ArgumentCount,
-					Delegate.CreateDelegate(typeof(WrenForeignMethod), methodInfo) as WrenForeignMethod);
-
-				methods.Add(wrenMethod);
+				allocator =
+					Delegate.CreateDelegate(typeof(WrenForeignMethod), validAlloc.Item1 as MethodInfo) as WrenForeignMethod;
 			}
+
+			if (validFin.Item1 != null)
+			{
+				finalizer =
+					Delegate.CreateDelegate(typeof(WrenFinalizer), validFin.Item1 as MethodInfo) as WrenFinalizer;
+			}
+
+			for (int i = 0; i < attributedMembers.Count; i++)
+			{
+				(MemberInfo, AWrenAttribute) attributeMember = attributedMembers[i];
+				if (attributeMember == validAlloc) continue;
+				if (attributeMember == validFin) continue;
+
+				switch (attributeMember.Item2)
+				{
+					case WrenRawSourceAttribute rawSourceAttribute:
+						HandleManualSource(attributeMember.Item1 as MethodInfo, sb);
+						break;
+
+					case WrenMethodAttribute methodAttribute:
+						MethodInfo method = attributeMember.Item1 as MethodInfo;
+
+						if (IsValidMethodSignature(method) == false) continue;
+
+						string name = methodAttribute.Name ?? method.Name;
+						if (IsOriginalAttribute(methodAttributes, methodAttribute, name) == false) continue;
+
+						methodAttributes.Add(methodAttribute);
+
+						WrenMethod wrenMethod = new WrenMethod(methodAttribute.Type, name, methodAttribute.ArgumentCount,
+							Delegate.CreateDelegate(typeof(WrenForeignMethod), method) as WrenForeignMethod);
+
+						sb.Append("\t");
+						sb.Append(Wren.CreateSignature(methodAttribute.Type, name, methodAttribute.ArgumentCount,
+							SignatureStyle.ForeignImplementation));
+						sb.Append("\n");
+
+						methods.Add(wrenMethod);
+						break;
+				}
+			}
+
+			sb.Append("}");
 
 			return new WrenClass(classAttribute.Name ?? classType.Name, allocator, finalizer, methods);
 		}
@@ -271,14 +337,37 @@ namespace Wrenit.Utilities
 			return true;
 		}
 
-		private static bool IsValidCSharpSignature(MethodInfo methodInfo, bool isFinalizer = false)
+		private static void HandleManualSource(MethodInfo methodInfo, StringBuilder sb)
+		{
+			if (IsValidRawSignature(methodInfo) == false) return;
+
+			sb.Append($"\n// begin manual source: {methodInfo.Name}\n");
+			sb.Append((string) methodInfo.Invoke(null, null));
+			sb.Append("\n// end manual source\n\n");
+		}
+
+		private static bool IsValidFInalizerSignature(MethodInfo methodInfo)
 		{
 			ParameterInfo[] parameterInfos = methodInfo.GetParameters();
 			if (parameterInfos.Length != 1) return false;
 
-			if (isFinalizer) return parameterInfos[0].ParameterType == typeof(IntPtr);
+			return parameterInfos[0].ParameterType == typeof(WrenForeignObject);
+		}
+
+		private static bool IsValidMethodSignature(MethodInfo methodInfo)
+		{
+			ParameterInfo[] parameterInfos = methodInfo.GetParameters();
+			if (parameterInfos.Length != 1) return false;
 
 			return parameterInfos[0].ParameterType == typeof(WrenVm);
+		}
+
+		private static bool IsValidRawSignature(MethodInfo methodInfo)
+		{
+			ParameterInfo[] parameterInfos = methodInfo.GetParameters();
+			if (parameterInfos.Length != 0) return false;
+
+			return methodInfo.ReturnType == typeof(string);
 		}
 	}
 }
