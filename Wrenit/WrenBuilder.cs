@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -121,10 +122,33 @@ namespace Wrenit.Utilities
 		Is,
 	}
 
-	public abstract class AWrenAttribute : Attribute { }
+	public abstract class AWrenCodeAttribute : Attribute { }
+
+	public abstract class AWrenMetaAttribute : Attribute { }
+
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true)]
+	public class WrenAttributeAttribute : Attribute
+	{
+		public readonly string Group;
+		public readonly string Key;
+		public readonly object Value;
+		public bool RuntimeAccess;
+
+		public WrenAttributeAttribute(string group, string key) : this(group, key, (object) null) { }
+		public WrenAttributeAttribute(string group, string key, bool value) : this(group, key, (object) value) { }
+		public WrenAttributeAttribute(string group, string key, string value) : this(group, key, (object) value) { }
+		public WrenAttributeAttribute(string group, string key, double value) : this(group, key, (object) value) { }
+
+		private WrenAttributeAttribute(string group, string key, object value)
+		{
+			Group = group;
+			Value = value;
+			Key = key;
+		}
+	}
 
 	[AttributeUsage(AttributeTargets.Class)]
-	public class WrenModuleAttribute : AWrenAttribute
+	public class WrenModuleAttribute : AWrenCodeAttribute
 	{
 		public string Name;
 
@@ -137,7 +161,7 @@ namespace Wrenit.Utilities
 	}
 
 	[AttributeUsage(AttributeTargets.Class)]
-	public class WrenClassAttribute : AWrenAttribute
+	public class WrenClassAttribute : AWrenCodeAttribute
 	{
 		public readonly string Name;
 
@@ -150,16 +174,16 @@ namespace Wrenit.Utilities
 	}
 
 	[AttributeUsage(AttributeTargets.Method)]
-	public class WrenAllocatorAttribute : AWrenAttribute { }
+	public class WrenAllocatorAttribute : AWrenCodeAttribute { }
 
 	[AttributeUsage(AttributeTargets.Method)]
-	public class WrenFinalizerAttribute : AWrenAttribute { }
+	public class WrenFinalizerAttribute : AWrenCodeAttribute { }
 
 	[AttributeUsage(AttributeTargets.Method)]
-	public class WrenRawSourceAttribute : AWrenAttribute { }
+	public class WrenManualSourceAttribute : AWrenCodeAttribute { }
 
 	[AttributeUsage(AttributeTargets.Method)]
-	public class WrenMethodAttribute : AWrenAttribute
+	public class WrenMethodAttribute : AWrenCodeAttribute
 	{
 		public readonly string Name;
 		public readonly int ArgumentCount;
@@ -188,7 +212,7 @@ namespace Wrenit.Utilities
 	public static class WrenBuilder
 	{
 		private static Dictionary<Type, WrenModule> _modules = new Dictionary<Type, WrenModule>();
-		
+
 		private static T GetAttribute<T>(this MemberInfo info)
 			where T : Attribute
 		{
@@ -201,15 +225,15 @@ namespace Wrenit.Utilities
 			return info.GetCustomAttributes<T>().ToList();
 		}
 
-		private static List<(MemberInfo, AWrenAttribute)> GetAttributedMembers(this Type type)
+		private static List<(MemberInfo, AWrenCodeAttribute)> GetAttributedMembers(this Type type)
 		{
 			MemberInfo[] members = type.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
 
-			List<(MemberInfo, AWrenAttribute)> found = new List<(MemberInfo, AWrenAttribute)>();
+			List<(MemberInfo, AWrenCodeAttribute)> found = new List<(MemberInfo, AWrenCodeAttribute)>();
 
 			for (int i = 0; i < members.Length; i++)
 			{
-				List<AWrenAttribute> attributes = members[i].GetAttributes<AWrenAttribute>();
+				List<AWrenCodeAttribute> attributes = members[i].GetAttributes<AWrenCodeAttribute>();
 				if (attributes != null && attributes.Count != 0) found.Add((members[i], attributes[0]));
 			}
 
@@ -223,7 +247,7 @@ namespace Wrenit.Utilities
 			{
 				return _modules[moduleType];
 			}
-			
+
 			WrenModuleAttribute moduleAttribute = moduleType.GetAttribute<WrenModuleAttribute>();
 			if (moduleAttribute == null) return null;
 
@@ -232,7 +256,7 @@ namespace Wrenit.Utilities
 
 			List<WrenClass> classes = new List<WrenClass>();
 
-			List<(MemberInfo, AWrenAttribute)> members = moduleType.GetAttributedMembers();
+			List<(MemberInfo, AWrenCodeAttribute)> members = moduleType.GetAttributedMembers();
 
 			for (int i = 0; i < members.Count; i++)
 			{
@@ -242,8 +266,8 @@ namespace Wrenit.Utilities
 						classes.Add(BuildClass(members[i].Item1 as Type, classAttribute, sb));
 						break;
 
-					case WrenRawSourceAttribute rawSourceAttribute:
-						HandleManualSource(members[i].Item1 as MethodInfo, sb);
+					case WrenManualSourceAttribute rawSourceAttribute:
+						AppendManualSource(members[i].Item1 as MethodInfo, sb);
 						break;
 				}
 			}
@@ -256,16 +280,19 @@ namespace Wrenit.Utilities
 
 		private static WrenClass BuildClass(Type classType, WrenClassAttribute classAttribute, StringBuilder sb)
 		{
-			List<(MemberInfo, AWrenAttribute)> attributedMembers = classType.GetAttributedMembers();
+			List<(MemberInfo, AWrenCodeAttribute)> attributedMembers = classType.GetAttributedMembers();
 
-			(MemberInfo, AWrenAttribute) validAlloc = attributedMembers.Find(tuple =>
+			(MemberInfo, AWrenCodeAttribute) validAlloc = attributedMembers.Find(tuple =>
 				tuple.Item2 is WrenAllocatorAttribute && IsValidMethodSignature(tuple.Item1 as MethodInfo));
 
-			(MemberInfo, AWrenAttribute) validFin = attributedMembers.Find(tuple =>
+			(MemberInfo, AWrenCodeAttribute) validFin = attributedMembers.Find(tuple =>
 				tuple.Item2 is WrenFinalizerAttribute && IsValidFInalizerSignature(tuple.Item1 as MethodInfo));
+
+			List<WrenAttributeAttribute> usedAttributes = new List<WrenAttributeAttribute>();
 
 			string className = classAttribute.Name ?? classType.Name;
 
+			AppendWrenAttributes(classType.GetAttributes<WrenAttributeAttribute>(), sb, 0);
 			if (validAlloc.Item1 != null)
 			{
 				sb.Append("foreign ");
@@ -292,14 +319,14 @@ namespace Wrenit.Utilities
 
 			for (int i = 0; i < attributedMembers.Count; i++)
 			{
-				(MemberInfo, AWrenAttribute) attributeMember = attributedMembers[i];
+				(MemberInfo, AWrenCodeAttribute) attributeMember = attributedMembers[i];
 				if (attributeMember == validAlloc) continue;
 				if (attributeMember == validFin) continue;
 
 				switch (attributeMember.Item2)
 				{
-					case WrenRawSourceAttribute rawSourceAttribute:
-						HandleManualSource(attributeMember.Item1 as MethodInfo, sb);
+					case WrenManualSourceAttribute rawSourceAttribute:
+						AppendManualSource(attributeMember.Item1 as MethodInfo, sb);
 						break;
 
 					case WrenMethodAttribute methodAttribute:
@@ -314,6 +341,8 @@ namespace Wrenit.Utilities
 
 						WrenMethod wrenMethod = new WrenMethod(methodAttribute.Type, name, methodAttribute.ArgumentCount,
 							Delegate.CreateDelegate(typeof(WrenForeignMethod), method) as WrenForeignMethod);
+
+						AppendWrenAttributes(method.GetAttributes<WrenAttributeAttribute>(), sb, 1);
 
 						sb.Append("\t");
 						sb.Append(Wren.CreateSignature(methodAttribute.Type, name, methodAttribute.ArgumentCount,
@@ -346,7 +375,7 @@ namespace Wrenit.Utilities
 			return true;
 		}
 
-		private static void HandleManualSource(MethodInfo methodInfo, StringBuilder sb)
+		private static void AppendManualSource(MethodInfo methodInfo, StringBuilder sb)
 		{
 			if (IsValidRawSignature(methodInfo) == false) return;
 
@@ -377,6 +406,85 @@ namespace Wrenit.Utilities
 			if (parameterInfos.Length != 0) return false;
 
 			return methodInfo.ReturnType == typeof(string);
+		}
+
+		private static void AppendIndents(int indents, StringBuilder sb)
+		{
+			for (int i = 0; i < indents; i++)
+			{
+				sb.Append("\t");
+			}
+		}
+
+		private static void AppendWrenAttributes(List<WrenAttributeAttribute> attributes, StringBuilder sb, int indents)
+		{
+			if (attributes.Count == 0) return;
+			List<WrenAttributeAttribute> usedAttributes = new List<WrenAttributeAttribute>();
+
+			sb.Append("\n");
+			for (int i = 0; i < attributes.Count; i++)
+			{
+				WrenAttributeAttribute itAttribute = attributes[i];
+				if (usedAttributes.Contains(itAttribute)) continue;
+
+				AppendIndents(indents, sb);
+				sb.Append("#");
+				if (itAttribute.RuntimeAccess) sb.Append("!");
+				if (string.IsNullOrEmpty(itAttribute.Group) == false)
+				{
+					sb.Append(itAttribute.Group);
+					sb.Append("(\n");
+
+					List<WrenAttributeAttribute> attributesOfGroup = attributes.FindAll(searchAttribute =>
+					{
+						if (usedAttributes.Contains(searchAttribute)) return false;
+						if (string.IsNullOrEmpty(searchAttribute.Group)) return false;
+						if (searchAttribute.RuntimeAccess != itAttribute.RuntimeAccess) return false;
+
+						return searchAttribute.Group == itAttribute.Group;
+					});
+
+					usedAttributes.AddRange(attributesOfGroup);
+
+					for (int j = 0; j < attributesOfGroup.Count; j++)
+					{
+						AppendIndents(indents + 1, sb);
+						AppendWrenAttribute(attributesOfGroup[j], sb);
+						if (j + 1 < attributesOfGroup.Count) sb.Append(",");
+						sb.Append("\n");
+					}
+
+					AppendIndents(indents, sb);
+					sb.Append(")\n");
+				}
+				else
+				{
+					AppendWrenAttribute(itAttribute, sb);
+					sb.Append("\n");
+				}
+			}
+		}
+
+		private static void AppendWrenAttribute(WrenAttributeAttribute attribute, StringBuilder sb)
+		{
+			sb.Append(attribute.Key);
+			if (attribute.Value == null) return;
+
+			sb.Append(" = ");
+			switch (attribute.Value)
+			{
+				case double d:
+					sb.Append(d.ToString(CultureInfo.InvariantCulture));
+					return;
+
+				case bool b:
+					sb.Append(b ? "true" : "false");
+					return;
+
+				case string s:
+					sb.Append($"\"{s}\"");
+					return;
+			}
 		}
 	}
 }
