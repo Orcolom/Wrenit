@@ -1,4 +1,5 @@
 ﻿using System;
+using Wrenit.Shared;
 using Wrenit.Utilities;
 
 namespace Wrenit.Consoles
