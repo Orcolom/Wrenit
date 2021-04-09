@@ -200,11 +200,11 @@ namespace Wrenit
 
 		private void OnFinalize(IntPtr data)
 		{
-			IntPtr vm = Marshal.ReadIntPtr(data);
-			IntPtr id = Marshal.ReadIntPtr(data, IntPtr.Size);
-			WrenForeignObject foreignObject = WrenVm.GetVm(vm).GetForeignById(id);
+			IntPtr id = Marshal.ReadIntPtr(data);
+			WrenForeignObject foreignObject = WrenVm.GetForeignById(id);
 			_method?.Invoke(foreignObject);
-			foreignObject.Dispose();
+			WrenVm.RemoveForeignObject(foreignObject.Id);
+			foreignObject.Id = IntPtr.Zero;
 		}
 	}
 

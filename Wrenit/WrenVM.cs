@@ -17,25 +17,20 @@ namespace Wrenit
 			new Dictionary<IntPtr, WeakReference<WrenVm>>();
 
 		/// <summary>
-		/// list of handles created by the vm. They dont get garbage collected without disposing them 
-		/// </summary>
-		private readonly Dictionary<IntPtr, WrenHandle> _handles = new Dictionary<IntPtr, WrenHandle>();
-
-		/// <summary>
 		/// list of foreign objects created by the vm. They dont get garbage collected without disposing them 
 		/// </summary>
-		private readonly Dictionary<IntPtr, WrenForeignObject>
-			_foreignObjects = new Dictionary<IntPtr, WrenForeignObject>();
-
-		/// <summary>
-		/// list of unused foreign id's. when disposing a foreign object its id gets added here to be reused
-		/// </summary>
-		private readonly Queue<IntPtr> _unusedForeignIds = new Queue<IntPtr>();
+		private static readonly Dictionary<IntPtr, WrenForeignObject>
+			ForeignObjects = new Dictionary<IntPtr, WrenForeignObject>();
 		
 		/// <summary>
 		/// last used foreign id if no unused foreign ids are available
 		/// </summary>
-		private int _lastForeignId = 0;
+		private static int _lastForeignId = 0;
+		
+		/// <summary>
+		/// list of handles created by the vm. They dont get garbage collected without disposing them 
+		/// </summary>
+		private readonly Dictionary<IntPtr, WrenHandle> _handles = new Dictionary<IntPtr, WrenHandle>();
 
 		/// <summary>
 		/// pointer to c vm
@@ -121,15 +116,6 @@ namespace Wrenit
 
 			handles.Clear();
 
-			// copy foreign dictionary so they can safely be discarded
-			// Dictionary<IntPtr, WrenForeignObject> foreignObjects = new Dictionary<IntPtr, WrenForeignObject>(_foreignObjects);
-			// foreach (var pair in foreignObjects)
-			// {
-			// 	pair.Value.Free(this);
-			// }
-
-			_foreignObjects.Clear();
-
 			WrenImport.wrenFreeVM(Ptr);
 			VmList.Remove(Ptr);
 
@@ -159,12 +145,11 @@ namespace Wrenit
 		/// Note this does not free the object
 		/// </summary>
 		/// <param name="id">pointer of the object</param>
-		internal void RemoveForeignObject(IntPtr id)
+		internal static void RemoveForeignObject(IntPtr id)
 		{
-			if (_foreignObjects.ContainsKey(id) == false) return;
+			if (ForeignObjects.ContainsKey(id) == false) return;
 
-			_foreignObjects.Remove(id);
-			_unusedForeignIds.Enqueue(id);
+			ForeignObjects.Remove(id);
 		}
 
 		/// <summary>
@@ -182,11 +167,11 @@ namespace Wrenit
 		/// </summary>
 		/// <param name="id">id of the foreign object</param>
 		/// <returns>returns object if found</returns>
-		internal WrenForeignObject GetForeignById(IntPtr id)
+		internal static WrenForeignObject GetForeignById(IntPtr id)
 		{
-			if (_foreignObjects.ContainsKey(id) == false) return null;
+			if (ForeignObjects.ContainsKey(id) == false) return null;
 
-			return _foreignObjects[id];
+			return ForeignObjects[id];
 		}
 
 		#endregion
@@ -659,13 +644,14 @@ namespace Wrenit
 		/// <param name="classSlot">slot to store in</param>
 		public void SetSlotNewForeign<T>(int slot, int classSlot)
 		{
-			IntPtr id = _unusedForeignIds.Count > 0 ? _unusedForeignIds.Dequeue() : new IntPtr(++_lastForeignId);
+			_lastForeignId++;
+			if (_lastForeignId == 0) _lastForeignId++;
+			IntPtr id =  new IntPtr(_lastForeignId);
 
-			WrenForeignObject wrenForeignObject = new WrenForeignObject<T>(this, id);
-			_foreignObjects.Add(id, wrenForeignObject);
-			IntPtr ptr = WrenImport.wrenSetSlotNewForeign(Ptr, slot, classSlot, new IntPtr(IntPtr.Size * 2));
-			Marshal.WriteIntPtr(ptr, Ptr);
-			Marshal.WriteIntPtr(ptr, IntPtr.Size, id);
+			WrenForeignObject wrenForeignObject = new WrenForeignObject<T>(id);
+			ForeignObjects.Add(id, wrenForeignObject);
+			IntPtr ptr = WrenImport.wrenSetSlotNewForeign(Ptr, slot, classSlot, new IntPtr(IntPtr.Size));
+			Marshal.WriteIntPtr(ptr, id);
 		}
 
 		/// <summary>
@@ -679,8 +665,8 @@ namespace Wrenit
 		public WrenForeignObject GetSlotForeign(int slot)
 		{
 			IntPtr ptr = WrenImport.wrenGetSlotForeign(Ptr, slot);
-			IntPtr id = Marshal.ReadIntPtr(ptr, IntPtr.Size);
-			if (_foreignObjects.TryGetValue(id, out WrenForeignObject obj) == false) return null;
+			IntPtr id = Marshal.ReadIntPtr(ptr);
+			if (ForeignObjects.TryGetValue(id, out WrenForeignObject obj) == false) return null;
 
 			return obj;
 		}
