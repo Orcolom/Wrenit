@@ -14,8 +14,6 @@ var v = Vector.new(3,7)
 
 		public static void Main(string[] args)
 		{
-			Wren.Initialize();
-
 			WrenConfig config = WrenConfig.GetDefaults();
 			
 			config.ErrorHandler += Vm_ErrorEvent;

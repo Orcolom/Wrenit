@@ -40,7 +40,7 @@ namespace Wrenit.Shared
 				return @"static toString { ""{%(x), %(y)}"" }";
 			}
 
-			[WrenMethod(MethodType.Construct, "new", 2)]
+			[WrenMethod(WrenMethodType.Construct, "new", 2)]
 			public static void NewZero(WrenVm vm)
 			{
 				var fo = vm.GetSlotForeign<Vector>(0);
@@ -51,7 +51,7 @@ namespace Wrenit.Shared
 				};
 			}
 
-			[WrenMethod(MethodType.Method, 2)]
+			[WrenMethod(WrenMethodType.Method, 2)]
 			public static void Add(WrenVm vm)
 			{
 				var fo = vm.GetSlotForeign<Vector>(0);
@@ -59,7 +59,7 @@ namespace Wrenit.Shared
 				fo.TypedData.y += vm.GetSlotDouble(2);
 			}
 
-			[WrenMethod(MethodType.Times, 1)]
+			[WrenMethod(WrenMethodType.Times, 1)]
 			public static void Multiply(WrenVm vm)
 			{
 				var fo = vm.GetSlotForeign<Vector>(0);
@@ -67,21 +67,21 @@ namespace Wrenit.Shared
 				fo.TypedData.y *= vm.GetSlotDouble(1);
 			}
 
-			[WrenMethod(MethodType.FieldGetter)]
+			[WrenMethod(WrenMethodType.FieldGetter)]
 			public static void GetX(WrenVm vm)
 			{
 				var fo = vm.GetSlotForeign<Vector>(0);
 				vm.SetSlotDouble(0, fo.TypedData.x);
 			}
 
-			[WrenMethod(MethodType.FieldSetter)]
+			[WrenMethod(WrenMethodType.FieldSetter)]
 			public static void SetX(WrenVm vm)
 			{
 				var fo = vm.GetSlotForeign<Vector>(0);
 				fo.TypedData.x = vm.GetSlotDouble(0);
 			}
 
-			[WrenMethod(MethodType.SubScriptGetter, "x")] // names get ignored for signatures that dont need it
+			[WrenMethod(WrenMethodType.SubScriptGetter, "x")] // names get ignored for signatures that dont need it
 			public static void Subscript(WrenVm vm)
 			{
 				var fo = vm.GetSlotForeign<Vector>(0);

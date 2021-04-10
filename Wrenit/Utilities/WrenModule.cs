@@ -5,7 +5,7 @@ namespace Wrenit.Utilities
 	/// <summary>
 	/// defines a wren module in c#
 	/// </summary>
-	public class WrenModule
+	public class WrenModule : IWrenUtility
 	{
 		/// <summary>
 		/// name of the module
@@ -75,6 +75,7 @@ namespace Wrenit.Utilities
 		/// <param name="config"></param>
 		public void Bind(ref WrenConfig config)
 		{
+			config.AddToCache(this);
 			config.LoadModuleHandler += LoadModuleHandler;
 			config.BindForeignMethodHandler += BindForeignMethodHandler;
 			config.BindForeignClassHandler += BindForeignClassHandler;
@@ -84,8 +85,9 @@ namespace Wrenit.Utilities
 		/// unbind the module from the config's <see cref="WrenConfig.BindForeignMethodHandler"/> and <see cref="WrenConfig.BindForeignClassHandler"/>
 		/// </summary>
 		/// <param name="config"></param>
-		public void UnBind(ref WrenConfig config)
+		public void Unbind(ref WrenConfig config)
 		{
+			config.RemoveFromCache(this);
 			config.LoadModuleHandler -= LoadModuleHandler;
 			config.BindForeignMethodHandler -= BindForeignMethodHandler;
 			config.BindForeignClassHandler -= BindForeignClassHandler;
@@ -235,7 +237,7 @@ namespace Wrenit.Utilities
 		/// <summary>
 		/// the method type
 		/// </summary>
-		private readonly MethodType _type;
+		private readonly WrenMethodType _type;
 
 		// ReSharper disable once UnusedMember.Local
 		private WrenMethod() { }
@@ -247,10 +249,10 @@ namespace Wrenit.Utilities
 		/// <param name="name">name of the method.</param>
 		/// <param name="argumentCount">amount of arguments</param>
 		/// <param name="method">method to bind</param>
-		public WrenMethod(MethodType type, string name, int argumentCount, WrenForeignMethod method)
+		public WrenMethod(WrenMethodType type, string name, int argumentCount, WrenForeignMethod method)
 		{
-			Signature = Wren.CreateSignature(type, name, argumentCount);
-			IsStatic = type == MethodType.StaticMethod;
+			Signature = WrenSignature.CreateSignature(type, name, argumentCount);
+			IsStatic = type == WrenMethodType.StaticMethod;
 			MethodBinding = new WrenForeignMethodBinding(method);
 			_type = type;
 		}

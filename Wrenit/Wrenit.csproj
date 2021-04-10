@@ -43,14 +43,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Interop\WrenInterop.cs" />
+    <Compile Include="Utilities\WrenAttributes.cs" />
+    <Compile Include="Utilities\WrenBuilder.cs" />
+    <Compile Include="Utilities\WrenMethodType.cs" />
+    <Compile Include="Utilities\WrenModule.cs" />
+    <Compile Include="Utilities\WrenSignature.cs" />
     <Compile Include="Wren.cs" />
     <Compile Include="WrenForeignObject.cs" />
     <Compile Include="WrenHandle.cs" />
-    <Compile Include="WrenInterop.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WrenConfig.cs" />
-    <Compile Include="WrenBuilder.cs" />
-    <Compile Include="WrenModule.cs" />
     <Compile Include="WrenVM.cs" />
   </ItemGroup>
   <ItemGroup>

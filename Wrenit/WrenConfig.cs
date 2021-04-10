@@ -1,7 +1,15 @@
-﻿using Wrenit.Interop;
+﻿using System.Collections.Generic;
+using Wrenit.Interop;
 
 namespace Wrenit
 {
+
+	public interface IWrenUtility
+	{
+		public void Bind(ref WrenConfig config);
+		public void Unbind(ref WrenConfig config);
+	}
+	
 	/// <summary>
 	/// Configuration used to handle wren callbacks
 	/// </summary>
@@ -19,8 +27,12 @@ namespace Wrenit
 		private static bool _hasDefaults;
 		
 		/// <inheritdoc cref="InteropWrenConfiguration.ReallocateFn"/>
-		internal static WrenReallocateFn DefaultReallocateFn; 
+		internal static WrenReallocateFn DefaultReallocateFn;
 
+		/// <summary>
+		/// lift of bindable elements bound to this config 
+		/// </summary>
+		private List<IWrenUtility> _bindables;
 		
 		/// <inheritdoc cref="InteropWrenConfiguration.InitialHeapSize"/>
 		public ulong InitialHeapSize;
@@ -125,6 +137,17 @@ namespace Wrenit
 		/// </summary>
 		public WrenBindForeignClass BindForeignClassHandler;
 
+		public void AddToCache(IWrenUtility utility)
+		{
+			_bindables ??= new List<IWrenUtility>();
+			_bindables.Add(utility);
+		}
+
+		public void RemoveFromCache(IWrenUtility utility)
+		{
+			_bindables?.Remove(utility);
+		}
+		
 		/// <summary>
 		/// Get a default config structure 
 		/// </summary>
