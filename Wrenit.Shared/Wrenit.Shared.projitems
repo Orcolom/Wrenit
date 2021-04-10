@@ -9,6 +9,7 @@
     <Import_RootNamespace>Wrenit.Shared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Constants.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Vector.cs" />
   </ItemGroup>
 </Project>

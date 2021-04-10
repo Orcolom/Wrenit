@@ -27,6 +27,21 @@ namespace Wrenit.Utilities
 		}
 	}
 
+	[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+	public class WrenImportAttribute : AWrenMetaAttribute
+	{
+		public readonly string Module;
+		public readonly string For;
+		public readonly string As;
+
+		public WrenImportAttribute(string module, string @for = null, string @as = null)
+		{
+			Module = module;
+			For = @for;
+			As = @as;
+		}
+	}
+
 	[AttributeUsage(AttributeTargets.Class)]
 	public class WrenModuleAttribute : AWrenCodeAttribute
 	{

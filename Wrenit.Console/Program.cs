@@ -7,9 +7,9 @@ namespace Wrenit.Consoles
 	internal class Program
 	{
 		private static string _script = @"
-import ""Math"" for Vector
+import ""Math"" for PI2
 
-var v = Vector.new(3,7)
+System.print(PI2)
 		";
 
 		public static void Main(string[] args)
@@ -19,6 +19,7 @@ var v = Vector.new(3,7)
 			config.ErrorHandler += Vm_ErrorEvent;
 			config.WriteHandler += Vm_WriteEvent;
 			
+			WrenBuilder.Build<Constants>().Bind(ref config);
 			WrenBuilder.Build<WrenMath>().Bind(ref config);
 			
 

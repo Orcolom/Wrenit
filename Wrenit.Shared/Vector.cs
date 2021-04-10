@@ -11,12 +11,14 @@ namespace Wrenit.Shared
 	}
 
 	[WrenModule("Math")]
+	[WrenImport("Constants", "PI")]
+	[WrenImport("Constants", "HelloWorld", "HW")]
 	public class WrenMath
 	{
 		[WrenManualSource]
 		private static string Raw1()
 		{
-			return "var PI = 3.1415";
+			return "var PI2 = PI * 2";
 		}
 
 		[WrenClass(nameof(Vector))]

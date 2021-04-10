@@ -101,7 +101,7 @@ namespace Wrenit.Utilities
 		/// <inheritdoc cref="WrenConfig.BindForeignClassHandler"/>
 		private WrenForeignClassBinding BindForeignClassHandler(WrenVm vm, string module, string className)
 		{
-			return FindClass(className).AsForeign();
+			return FindClass(className)?.AsForeign();
 		}
 
 		/// <inheritdoc cref="WrenConfig.BindForeignMethodHandler"/>
