@@ -137,12 +137,18 @@ namespace Wrenit
 		/// </summary>
 		public WrenBindForeignClass BindForeignClassHandler;
 
+		/// <summary>
+		/// add a utility class to this config. should be called from inside of <see cref="IWrenUtility.Bind"/>
+		/// </summary>
 		public void AddToCache(IWrenUtility utility)
 		{
 			_bindables ??= new List<IWrenUtility>();
 			_bindables.Add(utility);
 		}
 
+		/// <summary>
+		/// remove a utility class from this config. should be called from inside of <see cref="IWrenUtility.Unbind"/>
+		/// </summary>
 		public void RemoveFromCache(IWrenUtility utility)
 		{
 			_bindables?.Remove(utility);

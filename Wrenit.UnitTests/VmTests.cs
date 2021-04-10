@@ -9,10 +9,18 @@ namespace Wrenit.UnitTests
 		[Test]
 		public void Vm()
 		{
+			VmX(out var weakVm);
+			
+			GC.Collect();
+			
+			Assert.False(weakVm.TryGetTarget(out _));
+		}
+
+		private void VmX(out WeakReference<WrenVm> weakVm)
+		{
 			WrenVm vm = new WrenVm();
+			weakVm = new WeakReference<WrenVm>(vm);
 			Assert.True(vm.IsAlive);
-			vm.Dispose();
-			Assert.False(vm.IsAlive);
 		}
 		
 		[Test]
@@ -31,20 +39,12 @@ namespace Wrenit.UnitTests
 		[Test]
 		public void Call()
 		{
-			WeakReference<WrenVm> weakVm = null;
-			WeakReference<WrenHandle> weakHandle = null;
-
-			CallX(out weakVm, out weakHandle);
-			GC.WaitForPendingFinalizers();
+			CallX(out var weakVm, out var weakHandle);
 			
-			if (weakHandle.TryGetTarget(out WrenHandle handle))
-			{
-				if (handle.IsAlive) Assert.Fail();
-			}
-			if (weakVm.TryGetTarget(out WrenVm vm))
-			{
-				if (vm.IsAlive) Assert.Fail();
-			}
+			GC.Collect();
+
+			Assert.False(weakHandle.TryGetTarget(out _));
+			Assert.False(weakVm.TryGetTarget(out _));
 		}
 
 		private void CallX(out WeakReference<WrenVm> weakVm, out WeakReference<WrenHandle> weakHandle)
@@ -61,8 +61,6 @@ namespace Wrenit.UnitTests
 			vm.GetVariable("main", "c", 0);
 			WrenInterpretResult result = vm.Call(handle);
 			Assert.AreEqual(WrenInterpretResult.Success, result);
-
-			GC.Collect();
 		}
 	}
 }

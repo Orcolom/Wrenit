@@ -99,6 +99,7 @@ namespace Wrenit
 		public void Dispose()
 		{
 			Free();
+			GC.SuppressFinalize(this);
 		}
 
 		/// <summary>

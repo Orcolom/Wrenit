@@ -12,9 +12,8 @@ Wrenit is a .net binding for [wren](wren_site) written in c#
 #### TODOs
 - [ ] needs full documentation
 - [ ] full unit testing
-- [ ] move some code around to pretty the source code, its a mess in some files
-- [ ] ensure it's fully memory safe
 - [ ] write a special errors and messages handler so the user only receives one callback with all the info 
+- [ ] Write a decent example program
 - [ ] ...
 
 ## Usage

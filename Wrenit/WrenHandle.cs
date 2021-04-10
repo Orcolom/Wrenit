@@ -39,6 +39,7 @@ namespace Wrenit
 		public void Dispose()
 		{
 			Free();
+			GC.SuppressFinalize(this);
 		}
 
 		public void Free(WrenVm vm)
