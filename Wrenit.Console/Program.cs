@@ -18,10 +18,11 @@ var v = Vector.new(3,7)
 
 			WrenConfig config = WrenConfig.GetDefaults();
 			
-			WrenBuilder.Build<WrenMath>().Bind(ref config);
-			
 			config.ErrorHandler += Vm_ErrorEvent;
 			config.WriteHandler += Vm_WriteEvent;
+			
+			WrenBuilder.Build<WrenMath>().Bind(ref config);
+			
 
 			WrenVm vm = new WrenVm(config);
 			vm.Interpret("main", _script);
