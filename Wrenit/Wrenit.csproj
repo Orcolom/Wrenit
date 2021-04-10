@@ -57,11 +57,11 @@
     <Compile Include="WrenVM.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\..\Wren\lib\wren.dll">
+    <Content Include="..\WrenLib\wren.dll">
       <Link>wren.dll</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\..\Wren\lib\wren_d.dll">
+    <Content Include="..\WrenLib\wren_d.dll">
       <Link>wren_d.dll</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
