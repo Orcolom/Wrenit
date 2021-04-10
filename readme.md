@@ -52,6 +52,7 @@ if (result == WrenInterpretResult.Success)
 
 Wrenit has a c# to wren source code builder via attributes
 
+The more extensive Vector example with implementations can be found [here](wrenit_vector)
 ```cs
 [WrenModule("Math")]
 public class Math
@@ -85,7 +86,7 @@ public class Math
 public void BindModules(ref WrenConfig config)
 {
 	// the build module will get cached
-	WrenModule module = WrenBuilder.Build<WrenMath>();
+	WrenModule module = WrenBuilder.Build<Math>();
 	
 	// bind it to the needed callbacks of a config
 	module.Bind(ref config);
@@ -104,5 +105,6 @@ var PI = 3.1415
 ```
 
 [wren_site]: https://wren.io
+[wrenit_vector]: https://github.com/Orcolom/Wrenit/blob/main/Wrenit.Shared/Vector.cs
 
 ## 
