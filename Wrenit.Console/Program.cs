@@ -7,8 +7,9 @@ namespace Wrenit.Consoles
 	internal class Program
 	{
 		private static string _script = @"
-import ""Math"" for PI2
+import ""Math"" for PI2, Vector
 
+var v = Vector.new(0,0)
 System.print(PI2)
 		";
 

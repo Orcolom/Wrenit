@@ -99,7 +99,12 @@ namespace Wrenit.Utilities
 				sb.Append("foreign ");
 			}
 
-			sb.Append($"class {className} {{\n");
+			sb.Append($"class {className}");
+			if (string.IsNullOrEmpty(classAttribute.Inherit) == false)
+			{
+				sb.Append($"	is {classAttribute.Inherit}");
+			}
+			sb.Append("{\n");
 
 			List<WrenMethod> methods = new List<WrenMethod>();
 			List<WrenMethodAttribute> methodAttributes = new List<WrenMethodAttribute>();
@@ -155,7 +160,7 @@ namespace Wrenit.Utilities
 				}
 			}
 
-			sb.Append("}");
+			sb.Append("}\n\n");
 
 			return new WrenClass(classAttribute.Name ?? classType.Name, allocator, finalizer, methods);
 		}

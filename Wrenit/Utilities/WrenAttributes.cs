@@ -59,12 +59,14 @@ namespace Wrenit.Utilities
 	public class WrenClassAttribute : AWrenCodeAttribute
 	{
 		public readonly string Name;
+		public readonly string Inherit;
 
 		public WrenClassAttribute() { }
 
-		public WrenClassAttribute(string name)
+		public WrenClassAttribute(string name, string inherit = null)
 		{
 			Name = name;
+			Inherit = inherit;
 		}
 	}
 
