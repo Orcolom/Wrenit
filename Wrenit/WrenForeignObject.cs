@@ -29,12 +29,26 @@ namespace Wrenit
 		/// </summary>
 		internal IntPtr Id;
 
+		private object _data;
+		
 		public bool IsAlive => Id != IntPtr.Zero;
 
 		/// <summary>
 		/// the data in the foreign object
 		/// </summary>
-		public object Data { get; set; }
+		public object Data
+		{
+			get
+			{
+				this.AssertAlive();
+				return _data;
+			}
+			set
+			{
+				this.AssertAlive();
+				_data = value;
+			}
+		}
 
 		// ReSharper disable once UnusedMember.Local
 		private WrenForeignObject() { }

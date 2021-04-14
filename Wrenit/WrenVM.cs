@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Runtime.Remoting.Messaging;
 using Wrenit.Interop;
 
 namespace Wrenit
@@ -187,9 +189,7 @@ namespace Wrenit
 		/// <returns>interpret result</returns>
 		public WrenInterpretResult Interpret(string module, string source)
 		{
-			if (IsAlive == false)
-				throw new ObjectDisposedException("Tried to Interpret module in a disposed VM");
-
+			this.AssertAlive();
 			WrenInterpretResult error = WrenImport.wrenInterpret(Ptr, module, source);
 			return error;
 		}
@@ -209,6 +209,7 @@ namespace Wrenit
 		/// <returns>pointer to handle</returns>
 		public WrenSignatureHandle MakeCallHandle(string signature)
 		{
+			this.AssertAlive();
 			IntPtr handlePtr = WrenImport.wrenMakeCallHandle(Ptr, signature);
 			WrenSignatureHandle handle = new WrenSignatureHandle(this, handlePtr);
 			_handles.Add(handlePtr, handle);
@@ -233,6 +234,8 @@ namespace Wrenit
 		/// <returns>interpret result</returns>
 		public WrenInterpretResult Call(WrenSignatureHandle handle)
 		{
+			this.AssertAlive();
+			handle.AssertAlive();
 			return WrenImport.wrenCall(Ptr, handle.Ptr);
 		}
 
@@ -413,21 +416,33 @@ namespace Wrenit
 		/// </summary>
 		/// <param name="slot">slot index</param>
 		/// <returns>resolved type</returns>
-		public WrenValueType GetSlotType(int slot) => WrenImport.wrenGetSlotType(Ptr, slot);
+		public WrenValueType GetSlotType(int slot)
+		{
+			this.AssertSlotCount(slot);
+			return WrenImport.wrenGetSlotType(Ptr, slot);
+		}
 
 		/// <summary>
 		/// Reads a boolean value from <paramref name="slot"/>.
 		/// It is an error to call this if the slot does not contain a boolean value.
 		/// </summary>
 		/// <param name="slot">slot to get</param>
-		public bool GetSlotBool(int slot) => WrenImport.wrenGetSlotBool(Ptr, slot);
+		public bool GetSlotBool(int slot)
+		{
+			this.AssertSlot(slot, WrenValueType.Bool);
+			return WrenImport.wrenGetSlotBool(Ptr, slot);
+		}
 
 		/// <summary>
 		/// Stores the boolean <paramref name="value"/> in <paramref name="slot"/>.
 		/// </summary>
 		/// <param name="slot">slot to store int</param>
 		/// <param name="value">value to store</param>
-		public void SetSlotBool(int slot, bool value) => WrenImport.wrenSetSlotBool(Ptr, slot, value);
+		public void SetSlotBool(int slot, bool value)
+		{
+			this.AssertSlot(slot);
+			WrenImport.wrenSetSlotBool(Ptr, slot, value);
+		}
 
 		/// <summary>
 		/// Reads a byte array from <paramref name="slot"/>.
@@ -437,6 +452,7 @@ namespace Wrenit
 		/// <param name="slot">slot to get</param>
 		public byte[] GetSlotBytes(int slot)
 		{
+			this.AssertSlot(slot, WrenValueType.String);
 			IntPtr arrayPtr = WrenImport.wrenGetSlotBytes(Ptr, slot, out int length);
 			byte[] managedArray = new byte[length];
 			Marshal.Copy(arrayPtr, managedArray, 0, length);
@@ -451,6 +467,7 @@ namespace Wrenit
 		/// <param name="bytes">bytes to store</param>
 		public void SetSlotBytes(int slot, byte[] bytes)
 		{
+			this.AssertSlot(slot);
 			IntPtr arrayPtr = Marshal.AllocHGlobal(bytes.Length);
 			Marshal.Copy(bytes, 0, arrayPtr, bytes.Length);
 			WrenImport.wrenSetSlotBytes(Ptr, slot, arrayPtr, new UIntPtr((uint) bytes.Length));
@@ -463,14 +480,22 @@ namespace Wrenit
 		/// It is an error to call this if the slot does not contain a number.
 		/// </summary>
 		/// <param name="slot">slot to get</param>
-		public double GetSlotDouble(int slot) => WrenImport.wrenGetSlotDouble(Ptr, slot);
+		public double GetSlotDouble(int slot)
+		{
+			this.AssertSlot(slot, WrenValueType.Number);
+			return WrenImport.wrenGetSlotDouble(Ptr, slot);
+		}
 
 		/// <summary>
 		/// Stores the numeric <paramref name="value"/> in <paramref name="slot"/>.
 		/// </summary>
 		/// <param name="slot">slot to store in</param>
 		/// <param name="value">value to store</param>
-		public void SetSlotDouble(int slot, double value) => WrenImport.wrenSetSlotDouble(Ptr, slot, value);
+		public void SetSlotDouble(int slot, double value)
+		{
+			this.AssertSlot(slot);
+			WrenImport.wrenSetSlotDouble(Ptr, slot, value);
+		}
 
 		/// <summary>
 		/// Reads a string from <paramref name="slot"/>.
@@ -480,6 +505,7 @@ namespace Wrenit
 		/// <param name="slot">slot to get</param>
 		public string GetSlotString(int slot)
 		{
+			this.AssertSlot(slot, WrenValueType.String);
 			IntPtr intPtr =  WrenImport.wrenGetSlotString(Ptr, slot);
 			return Marshal.PtrToStringAnsi(intPtr);
 		}
@@ -492,13 +518,21 @@ namespace Wrenit
 		/// 	should use <see cref="SetSlotBytes"/> instead.
 		/// </para>
 		/// </summary>
-		public void SetSlotString(int slot, string value) => WrenImport.wrenSetSlotString(Ptr, slot, value);
+		public void SetSlotString(int slot, string value)
+		{
+			this.AssertSlot(slot);
+			WrenImport.wrenSetSlotString(Ptr, slot, value);
+		}
 
 		/// <summary>
 		/// Stores null in <paramref name="slot"/>.
 		/// </summary>
 		/// <param name="slot">slot to store in</param>
-		public void SetSlotNull(int slot) => WrenImport.wrenSetSlotNull(Ptr, slot);
+		public void SetSlotNull(int slot)
+		{
+			this.AssertSlot(slot);
+			WrenImport.wrenSetSlotNull(Ptr, slot);
+		}
 
 		/// <summary>
 		/// Creates a handle for the value stored in <paramref name="slot"/>.
@@ -509,6 +543,7 @@ namespace Wrenit
 		/// <param name="slot">slot to get</param>
 		public WrenHandle GetSlotHandle(int slot)
 		{
+			this.AssertSlot(slot);
 			IntPtr handlePtr = WrenImport.wrenGetSlotHandle(Ptr, slot);
 			WrenHandle handle = new WrenHandle(this, handlePtr);
 			_handles.Add(handlePtr, handle);
@@ -522,7 +557,11 @@ namespace Wrenit
 		/// </summary>
 		/// <param name="slot">slot to store in</param>
 		/// <param name="handle">pointer of handle to store</param>
-		public void SetSlotHandle(int slot, WrenHandle handle) => WrenImport.wrenSetSlotHandle(Ptr, slot, handle.Ptr);
+		public void SetSlotHandle(int slot, WrenHandle handle)
+		{
+			this.AssertSlot(slot);
+			WrenImport.wrenSetSlotHandle(Ptr, slot, handle.Ptr);
+		}
 
 		#region Lists
 
@@ -530,14 +569,22 @@ namespace Wrenit
 		/// Stores a new empty list in <paramref name="slot"/>.
 		/// </summary>
 		/// <param name="slot">slot to store in</param>
-		public void SetSlotNewList(int slot) => WrenImport.wrenSetSlotNewList(Ptr, slot);
-		
+		public void SetSlotNewList(int slot)
+		{
+			this.AssertSlot(slot);
+			WrenImport.wrenSetSlotNewList(Ptr, slot);
+		}
+
 		/// <summary>
 		/// Returns the number of elements in the list stored in <paramref name="slot"/>.
 		/// </summary>
 		/// <param name="slot">slot get from</param>
 		/// <returns>count of list elements</returns>
-		public int GetListCount(int slot) => WrenImport.wrenGetListCount(Ptr, slot);
+		public int GetListCount(int slot)
+		{
+			this.AssertSlot(slot, WrenValueType.List);
+			return WrenImport.wrenGetListCount(Ptr, slot);
+		}
 
 		/// <summary>
 		/// Sets the value stored at <paramref name="index"/> in the list at <paramref name="listSlot"/>, 
@@ -546,8 +593,12 @@ namespace Wrenit
 		/// <param name="listSlot">slot where the list is</param>
 		/// <param name="index">index in the list</param>
 		/// <param name="elementSlot">slot of value to store in list</param>
-		public void SetListElement(int listSlot, int index, int elementSlot) =>
+		public void SetListElement(int listSlot, int index, int elementSlot)
+		{
+			this.AssertSlot(listSlot, WrenValueType.List);
+			this.AssertSlot(elementSlot);
 			WrenImport.wrenSetListElement(Ptr, listSlot, index, elementSlot);
+		}
 
 		/// <summary>
 		/// Reads element <paramref name="index"/> from the list in <paramref name="listSlot"/> and stores it in <paramref name="elementSlot"/>.
@@ -555,8 +606,12 @@ namespace Wrenit
 		/// <param name="listSlot">slot where the list is</param>
 		/// <param name="index">index in the list</param>
 		/// <param name="elementSlot">slot to store the value in</param>
-		public void GetListElement(int listSlot, int index, int elementSlot) =>
+		public void GetListElement(int listSlot, int index, int elementSlot)
+		{
+			this.AssertSlot(listSlot, WrenValueType.List);
+			this.AssertSlot(elementSlot);
 			WrenImport.wrenGetListElement(Ptr, listSlot, index, elementSlot);
+		}
 
 		/// <summary>
 		/// Takes the value stored at <paramref name="elementSlot"/> and inserts it into the list stored
@@ -569,32 +624,49 @@ namespace Wrenit
 		/// <param name="listSlot">slot where the list is</param>
 		/// <param name="index">index to store element</param>
 		/// <param name="elementSlot">slot of value to store in list</param>
-		public void InsertInList(int listSlot, int index, int elementSlot) =>
+		public void InsertInList(int listSlot, int index, int elementSlot)
+		{
+			this.AssertSlot(listSlot, WrenValueType.List);
+			this.AssertSlot(elementSlot);
 			WrenImport.wrenInsertInList(Ptr, listSlot, index, elementSlot);
+		}
 
 		#endregion
 
 		#region Maps
-		
+
 		/// <summary>
 		/// Stores a new empty map in <paramref name="slot"/>.
 		/// </summary>
 		/// <param name="slot">slot to store</param>
-		public void SetSlotNewMap(int slot) => WrenImport.wrenSetSlotNewMap(Ptr, slot);
+		public void SetSlotNewMap(int slot)
+		{
+			this.AssertSlot(slot);
+			WrenImport.wrenSetSlotNewMap(Ptr, slot);
+		}
 
 		/// <summary>
 		/// Returns the number of entries in the map stored in <paramref name="slot"/>.
 		/// </summary>
 		/// <param name="slot">slot to look at</param>
 		/// <returns>count of entries</returns>
-		public int GetMapCount(int slot) => WrenImport.wrenGetMapCount(Ptr, slot);
-		
+		public int GetMapCount(int slot)
+		{
+			this.AssertSlot(slot, WrenValueType.Map);
+			return WrenImport.wrenGetMapCount(Ptr, slot);
+		}
+
 		/// <summary>
 		/// Returns true if the key in <paramref name="keySlot"/> is found in the map placed in <paramref name="mapSlot"/>.
 		/// </summary>
 		/// <param name="mapSlot">slot where the map is</param>
 		/// <param name="keySlot">slot of value to check exists</param>
-		public bool GetMapContainsKey(int mapSlot, int keySlot) => WrenImport.wrenGetMapContainsKey(Ptr, mapSlot, keySlot);
+		public bool GetMapContainsKey(int mapSlot, int keySlot)
+		{
+			this.AssertSlot(mapSlot, WrenValueType.Map);
+			this.AssertSlot(keySlot);
+			return WrenImport.wrenGetMapContainsKey(Ptr, mapSlot, keySlot);
+		}
 
 		/// <summary>
 		/// Retrieves a value with the key in <paramref name="keySlot"/> from the map in <paramref name="mapSlot"/> and
@@ -603,8 +675,13 @@ namespace Wrenit
 		/// <param name="mapSlot">slot where the map is</param>
 		/// <param name="keySlot">slot of the key</param>
 		/// <param name="valueSlot">slot to store the value in</param>
-		public void GetMapValue(int mapSlot, int keySlot, int valueSlot) =>
+		public void GetMapValue(int mapSlot, int keySlot, int valueSlot)
+		{
+			this.AssertSlot(mapSlot, WrenValueType.Map);
+			this.AssertSlot(keySlot);
+			this.AssertSlot(valueSlot);
 			WrenImport.wrenGetMapValue(Ptr, mapSlot, keySlot, valueSlot);
+		}
 
 		/// <summary>
 		/// Takes the value stored at <paramref name="valueSlot"/> and inserts it into the map stored
@@ -613,8 +690,13 @@ namespace Wrenit
 		/// <param name="mapSlot">slot where map is</param>
 		/// <param name="keySlot">slot of the key to store in</param>
 		/// <param name="valueSlot">slot of the value to store</param>
-		public void SetMapValue(int mapSlot, int keySlot, int valueSlot) =>
+		public void SetMapValue(int mapSlot, int keySlot, int valueSlot)
+		{
+			this.AssertSlot(mapSlot, WrenValueType.Map);
+			this.AssertSlot(keySlot);
+			this.AssertSlot(valueSlot);
 			WrenImport.wrenSetMapValue(Ptr, mapSlot, keySlot, valueSlot);
+		}
 
 		/// <summary>
 		/// Removes a value from the map in <paramref name="mapSlot"/>, with the key from <paramref name="keySlot"/>,
@@ -624,8 +706,13 @@ namespace Wrenit
 		/// <param name="mapSlot">slot where the map is</param>
 		/// <param name="keySlot">slot of the key to remove</param>
 		/// <param name="removedValueSlot">slot to store value that was removed</param>
-		public void RemoveMapValue(int mapSlot, int keySlot, int removedValueSlot) =>
+		public void RemoveMapValue(int mapSlot, int keySlot, int removedValueSlot)
+		{
+			this.AssertSlot(mapSlot, WrenValueType.Map);
+			this.AssertSlot(keySlot);
+			this.AssertSlot(removedValueSlot);
 			WrenImport.wrenRemoveMapValue(Ptr, mapSlot, keySlot, removedValueSlot);
+		}
 
 		#endregion
 
@@ -645,6 +732,9 @@ namespace Wrenit
 		/// <param name="classSlot">slot to store in</param>
 		public void SetSlotNewForeign<T>(int slot, int classSlot)
 		{
+			this.AssertSlot(slot);
+			this.AssertSlot(classSlot);
+			
 			_lastForeignId++;
 			if (_lastForeignId == 0) _lastForeignId++;
 			IntPtr id =  new IntPtr(_lastForeignId);
@@ -665,6 +755,7 @@ namespace Wrenit
 		/// <returns>the foreign object</returns>
 		public WrenForeignObject GetSlotForeign(int slot)
 		{
+			this.AssertSlot(slot, WrenValueType.Foreign);
 			IntPtr ptr = WrenImport.wrenGetSlotForeign(Ptr, slot);
 			IntPtr id = Marshal.ReadIntPtr(ptr);
 			if (ForeignObjects.TryGetValue(id, out WrenForeignObject obj) == false) return null;
@@ -689,9 +780,13 @@ namespace Wrenit
 		/// <param name="module">module to check in</param>
 		/// <param name="name">name to get</param>
 		/// <param name="slot">slot to store in</param>
-		public void GetVariable(string module, string name, int slot) =>
+		public void GetVariable(string module, string name, int slot)
+		{
+			this.AssertVariable(module, name);
+			this.AssertSlot(slot);
 			WrenImport.wrenGetVariable(Ptr, module, name, slot);
-		
+		}
+
 		/// <summary>
 		/// Looks up the top level variable with <paramref name="name"/> in resolved <paramref name="module"/>, 
 		/// returns false if not found. The module must be imported at the time, 
@@ -699,7 +794,11 @@ namespace Wrenit
 		/// </summary>
 		/// <param name="module">module to check in</param>
 		/// <param name="name">name to check for</param>
-		public bool HasVariable(string module, string name) => WrenImport.wrenHasVariable(Ptr, module, name);
+		public bool HasVariable(string module, string name)
+		{
+			this.AssertModule(module);
+			return WrenImport.wrenHasVariable(Ptr, module, name);
+		}
 
 		/// <summary>
 		/// Returns true if <paramref name="module"/> has been imported/resolved before, false if not.
@@ -711,7 +810,11 @@ namespace Wrenit
 		/// Sets the current fiber to be aborted, and uses the value in <paramref name="slot"/> as the runtime error object.
 		/// </summary>
 		/// <param name="slot">slot for the runtime error</param>
-		public void AbortFiber(int slot) => WrenImport.wrenAbortFiber(Ptr, slot);
+		public void AbortFiber(int slot)
+		{
+			this.AssertSlot(slot);
+			WrenImport.wrenAbortFiber(Ptr, slot);
+		}
 
 		#endregion
 	}

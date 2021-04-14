@@ -46,6 +46,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AssertTest.cs" />
     <Compile Include="ConfigTests.cs" />
     <Compile Include="SlotTests.cs" />
     <Compile Include="VmTests.cs" />
