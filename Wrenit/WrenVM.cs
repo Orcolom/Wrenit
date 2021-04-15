@@ -730,19 +730,21 @@ namespace Wrenit
 		/// </summary>
 		/// <param name="slot">slot to get</param>
 		/// <param name="classSlot">slot to store in</param>
-		public void SetSlotNewForeign<T>(int slot, int classSlot)
+		public WrenForeignObject SetSlotNewForeign(int slot, int classSlot)
 		{
 			this.AssertSlot(slot);
 			this.AssertSlot(classSlot);
 			
 			_lastForeignId++;
 			if (_lastForeignId == 0) _lastForeignId++;
-			IntPtr id =  new IntPtr(_lastForeignId);
+			var id =  new IntPtr(_lastForeignId);
 
-			WrenForeignObject wrenForeignObject = new WrenForeignObject<T>(id);
+			var wrenForeignObject = new WrenForeignObject(id, null);
 			ForeignObjects.Add(id, wrenForeignObject);
 			IntPtr ptr = WrenImport.wrenSetSlotNewForeign(Ptr, slot, classSlot, new IntPtr(IntPtr.Size));
 			Marshal.WriteIntPtr(ptr, id);
+
+			return wrenForeignObject;
 		}
 
 		/// <summary>
@@ -762,16 +764,6 @@ namespace Wrenit
 
 			return obj;
 		}
-		
-		/// <summary>
-		/// Reads a foreign object from <paramref name="slot"/>
-		///
-		/// It is an error to call this if the slot does not contain an instance of a
-		/// foreign class.
-		/// </summary>
-		/// <param name="slot">slot to get</param>
-		/// <returns>the foreign object</returns>
-		public WrenForeignObject<T> GetSlotForeign<T>(int slot) => GetSlotForeign(slot) as WrenForeignObject<T>;
 
 		/// <summary>
 		/// Looks up the top level variable with <paramref name="name"/> in resolved <paramref name="module"/> and stores

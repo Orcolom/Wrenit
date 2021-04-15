@@ -5,7 +5,7 @@ using Wrenit.Utilities;
 
 namespace Wrenit
 {
-	internal static class Wren
+	public static class Wren
 	{
 		#if DEBUG
 		internal const string DllName = "wren_d.dll";
@@ -13,9 +13,9 @@ namespace Wrenit
 		internal const string DllName = "wren.dll";
 		#endif
 
-		private static readonly int[] WrenVersion = {0, 4, 0};
-		private static readonly string WrenVersionString = $"{WrenVersion[0]}.{WrenVersion[1]}.{WrenVersion[2]}";
-		private static readonly int WrenVersionNumber = WrenVersion[0] * 1000000 + WrenVersion[1] * 1000 + WrenVersion[2];
+		public static readonly int[] WrenVersion = {0, 4, 0};
+		public static readonly string WrenVersionString = $"{WrenVersion[0]}.{WrenVersion[1]}.{WrenVersion[2]}";
+		public static readonly int WrenVersionNumber = WrenVersion[0] * 1000000 + WrenVersion[1] * 1000 + WrenVersion[2];
 
 		private static bool _didInitializeCheck = false;
 

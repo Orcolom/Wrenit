@@ -58,5 +58,10 @@ namespace Wrenit
 			Id = id;
 			Data = data;
 		}
+
+		public WrenForeignObject<T> As<T>()
+		{
+			return this as WrenForeignObject<T>;
+		}
 	}
 }

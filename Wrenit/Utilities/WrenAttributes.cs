@@ -14,6 +14,7 @@ namespace Wrenit.Utilities
 		public readonly object Value;
 		public bool RuntimeAccess;
 
+		public WrenAttributeAttribute(string key) : this(null, key, (object) null) { }
 		public WrenAttributeAttribute(string group, string key) : this(group, key, (object) null) { }
 		public WrenAttributeAttribute(string group, string key, bool value) : this(group, key, (object) value) { }
 		public WrenAttributeAttribute(string group, string key, string value) : this(group, key, (object) value) { }
@@ -31,9 +32,25 @@ namespace Wrenit.Utilities
 	public class WrenImportAttribute : AWrenMetaAttribute
 	{
 		public readonly string Module;
+		public readonly Type ModuleType;
 		public readonly string For;
+		public readonly Type ForType;
 		public readonly string As;
 
+		public WrenImportAttribute(Type module, string @for = null, string @as = null)
+		{
+			ModuleType = module;
+			For = @for;
+			As = @as;
+		}
+		
+		public WrenImportAttribute(Type module, Type @for = null, string @as = null)
+		{
+			ModuleType = module;
+			ForType = @for;
+			As = @as;
+		}
+		
 		public WrenImportAttribute(string module, string @for = null, string @as = null)
 		{
 			Module = module;
@@ -60,13 +77,25 @@ namespace Wrenit.Utilities
 	{
 		public readonly string Name;
 		public readonly string Inherit;
+		public readonly Type InheritType;
 
 		public WrenClassAttribute() { }
 
-		public WrenClassAttribute(string name, string inherit = null)
+		public WrenClassAttribute(string name)
+		{
+			Name = name;
+		}
+		
+		public WrenClassAttribute(string name, string inherit)
 		{
 			Name = name;
 			Inherit = inherit;
+		}
+		
+		public WrenClassAttribute(string name, Type inherit)
+		{
+			Name = name;
+			InheritType = inherit;
 		}
 	}
 

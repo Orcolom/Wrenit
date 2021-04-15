@@ -11,8 +11,9 @@ namespace Wrenit.Shared
 	}
 
 	[WrenModule("Math")]
-	[WrenImport("Constants", "PI")]
-	[WrenImport("Constants", "HelloWorld", "HW")]
+	[WrenImport(typeof(Constants), "PI")]
+	[WrenImport(typeof(Constants), typeof(Constants.Version))]
+	[WrenImport("Constants", "Wrapper", "W")]
 	public class WrenMath
 	{
 		[WrenManualSource]

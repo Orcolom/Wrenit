@@ -11,6 +11,7 @@ namespace Wrenit.Utilities
 	public static class WrenBuilder
 	{
 		private static Dictionary<Type, WrenModule> _modules = new Dictionary<Type, WrenModule>();
+		private static Dictionary<Type, string> _names = new Dictionary<Type, string>();
 
 		private static T GetAttribute<T>(this MemberInfo info)
 			where T : Attribute
@@ -74,8 +75,9 @@ namespace Wrenit.Utilities
 			}
 
 			string source = sb.ToString();
-			WrenModule module = new WrenModule(moduleAttribute.Name ?? moduleType.Name, source, classes);
+			WrenModule module = new WrenModule(moduleAttribute.Name ?? moduleType.Name, source, classes, moduleType);
 			_modules.Add(moduleType, module);
+			_names.Add(moduleType, module.Name);
 			return module;
 		}
 
@@ -100,9 +102,11 @@ namespace Wrenit.Utilities
 			}
 
 			sb.Append($"class {className}");
-			if (string.IsNullOrEmpty(classAttribute.Inherit) == false)
+
+			string inherit = classAttribute.Inherit ?? GetName(classAttribute.InheritType); 
+			if (string.IsNullOrEmpty(inherit) == false)
 			{
-				sb.Append($"	is {classAttribute.Inherit}");
+				sb.Append($"	is {inherit}");
 			}
 			sb.Append("{\n");
 
@@ -162,7 +166,9 @@ namespace Wrenit.Utilities
 
 			sb.Append("}\n\n");
 
-			return new WrenClass(classAttribute.Name ?? classType.Name, allocator, finalizer, methods);
+			var wrenClass = new WrenClass(classAttribute.Name ?? classType.Name, allocator, finalizer, methods, classType);
+			_names.Add(classType, wrenClass.Name);
+			return wrenClass;
 		}
 
 		private static bool IsOriginalAttribute(List<WrenMethodAttribute> methods, WrenMethodAttribute attribute,
@@ -233,7 +239,8 @@ namespace Wrenit.Utilities
 				WrenImportAttribute itAttribute = importAttributes[i];
 				if (usedAttributes.Contains(itAttribute)) continue;
 
-				sb.Append($"import \"{itAttribute.Module}\"");
+				string module = itAttribute.Module ?? GetName(itAttribute.ModuleType);
+				sb.Append($"import \"{module}\"");
 
 				var attributesOfGroup = importAttributes.FindAll(searchAttribute =>
 				{
@@ -254,7 +261,8 @@ namespace Wrenit.Utilities
 						firstFor = false;
 					}
 
-					sb.Append(importAttribute.For);
+					string @for = itAttribute.For ?? GetName(itAttribute.ForType);
+					sb.Append(@for);
 
 					if (string.IsNullOrEmpty(importAttribute.As) == false)
 					{
@@ -337,6 +345,16 @@ namespace Wrenit.Utilities
 					sb.Append($"\"{s}\"");
 					return;
 			}
+		}
+
+		public static string GetName<T>()
+		{
+			return _names.TryGetValue(typeof(T), out string name) ? name : null;
+		}
+		
+		public static string GetName(Type type)
+		{
+			return _names.TryGetValue(type, out string name) ? name : null;
 		}
 	}
 }

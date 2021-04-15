@@ -51,6 +51,7 @@
     <Compile Include="Utilities\WrenSignature.cs" />
     <Compile Include="Wren.cs" />
     <Compile Include="WrenAssert.cs" />
+    <Compile Include="WrenExtensions.cs" />
     <Compile Include="WrenForeignObject.cs" />
     <Compile Include="WrenHandle.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
