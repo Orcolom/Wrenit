@@ -4,7 +4,7 @@ using NUnit.Framework;
 namespace Wrenit.UnitTests
 {
 	[TestFixture]
-	public class AssertTest
+	public class AssertTest : TestsBase
 	{
 		[Test]
 		public void AssertT()

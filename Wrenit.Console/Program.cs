@@ -6,47 +6,27 @@ namespace Wrenit.Consoles
 {
 	internal class Program
 	{
-		private static string _script = @"
-import ""Math"" for PI2, Vector
-
-var v = Vector.new(0,0)
-System.print(PI2)
-		";
-
 		public static void Main(string[] args)
 		{
-			WrenConfig config = WrenConfig.GetDefaults();
-			
-			config.ErrorHandler += Vm_ErrorEvent;
-			config.WriteHandler += Vm_WriteEvent;
-			
-			WrenBuilder.Build<Constants>().Bind(ref config);
-			WrenBuilder.Build<WrenMath>().Bind(ref config);
-			
+			string path = "./a/path/to/file.ext";
+			string main = $@"
+import ""Assets"" for Asset, AssetSystem
 
-			WrenVm vm = new WrenVm(config);
-			vm.Interpret("main", _script);
-		}
+var asset = AssetSystem.Load(""{path}"")
 
-		private static void Vm_WriteEvent(WrenVm vm, string text)
-		{
-			Console.Write(text);
-		}
-
-		private static void Vm_ErrorEvent(WrenVm vm, WrenErrorType result, string module, int line, string message)
-		{
-			switch(result)
+System.write(asset.path)
+";
+			var config = WrenConfig.GetDefaults();
+			config.WriteHandler += (wrenVm, text) =>
 			{
-				case WrenErrorType.CompileError:
-					Console.Write($"[COMPLILE ERROR in {module} line [{line}] {message}");
-					break;
-				case WrenErrorType.RuntimeError:
-					Console.Write($"[RUNTIME ERROR] {message}");
-					break;
-				case WrenErrorType.StackTrace:
-					Console.Write($"[{module} line [{line}] in {message}");
-					break;
-			}
+				Console.WriteLine("e");
+			};
+				
+			WrenBuilder.Build<AssetsModule>().Bind(ref config);
+			
+			var vm = new WrenVm(config);
+			var result = vm.Interpret("<main>", main);
+			Console.WriteLine("x");
 		}
 	}
 }

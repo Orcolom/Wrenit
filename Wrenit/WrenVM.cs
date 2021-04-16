@@ -730,7 +730,7 @@ namespace Wrenit
 		/// </summary>
 		/// <param name="slot">slot to get</param>
 		/// <param name="classSlot">slot to store in</param>
-		public WrenForeignObject SetSlotNewForeign(int slot, int classSlot)
+		public WrenForeignObject<T> SetSlotNewForeign<T>(int slot, int classSlot, T data = default)
 		{
 			this.AssertSlot(slot);
 			this.AssertSlot(classSlot);
@@ -739,14 +739,14 @@ namespace Wrenit
 			if (_lastForeignId == 0) _lastForeignId++;
 			var id =  new IntPtr(_lastForeignId);
 
-			var wrenForeignObject = new WrenForeignObject(id, null);
+			var wrenForeignObject = new WrenForeignObject<T>(id, data);
 			ForeignObjects.Add(id, wrenForeignObject);
 			IntPtr ptr = WrenImport.wrenSetSlotNewForeign(Ptr, slot, classSlot, new IntPtr(IntPtr.Size));
 			Marshal.WriteIntPtr(ptr, id);
 
 			return wrenForeignObject;
 		}
-
+		
 		/// <summary>
 		/// Reads a foreign object from <paramref name="slot"/>
 		///

@@ -6,8 +6,8 @@ using Wrenit.Utilities;
 
 namespace Wrenit.Shared
 {
-	[WrenModule]
-	public class Assets
+	[WrenModule("Assets")]
+	public class AssetsModule
 	{
 		private static Dictionary<int, AssetData> _assets = new Dictionary<int, AssetData>();
 		private static int _ids;
@@ -36,19 +36,19 @@ namespace Wrenit.Shared
 				string path = vm.GetSlotString(1);
 				
 				// get Asset class variable from module Assets and store in slot 0
-				if (vm.HasModule<Assets>() == false)
+				if (vm.HasModule<AssetsModule>() == false)
 				{
-					vm.AbortFiber($"Cant find module {WrenBuilder.GetName<Assets>()}");
+					vm.AbortFiber($"Cant find module {WrenBuilder.GetName<AssetsModule>()}");
 					return;
 				}
 
-				if (vm.HasVariable<Assets, Asset>() == false)
+				if (vm.HasVariable<AssetsModule, Asset>() == false)
 				{
-					vm.AbortFiber($"Cant find name {WrenBuilder.GetName<Asset>()} in module {WrenBuilder.GetName<Assets>()}");
+					vm.AbortFiber($"Cant find name {WrenBuilder.GetName<Asset>()} in module {WrenBuilder.GetName<AssetsModule>()}");
 					return;
 				}
 				
-				vm.GetVariable<Assets, Asset>(0);
+				vm.GetVariable<AssetsModule, Asset>(0);
 				
 				// create new foreign
 				//		with class in slot 0
@@ -68,8 +68,10 @@ namespace Wrenit.Shared
 			[WrenAllocator]
 			internal static void Alloc(WrenVm vm)
 			{
-				var foreign = vm.SetSlotNewForeign<AssetData>(0, 0);
-				foreign.TypedData.Id = ++_ids;
+				var foreign = vm.SetSlotNewForeign(0, 0, new AssetData()
+				{
+					Id = ++_ids,
+				});
 				_assets.Add(foreign.TypedData.Id, foreign.TypedData);
 			}
 
@@ -94,6 +96,18 @@ namespace Wrenit.Shared
 				var foreign = vm.GetSlotForeign<AssetData>(0);
 				vm.SetSlotDouble(0, foreign.TypedData.Id);
 			}
+		}
+	}
+	
+	
+	[WrenModule("AssetsFail")]
+	public class AssetsModule2
+	{
+		[WrenClass(null, typeof(AssetsModule.Asset))]
+		public class ImageAsset
+		{
+			[WrenMethod(WrenMethodType.Construct)]
+			public static void New() { }
 		}
 	}
 }

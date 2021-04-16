@@ -17,6 +17,7 @@ namespace Wrenit
 		}
 
 		internal WrenForeignObject(IntPtr id) : base(id, default(T)) { }
+		internal WrenForeignObject(IntPtr id, T data) : base(id, data) { }
 	}
 
 	/// <summary>

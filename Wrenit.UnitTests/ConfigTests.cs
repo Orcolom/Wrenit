@@ -5,7 +5,7 @@ using NUnit.Framework;
 namespace Wrenit.UnitTests
 {
 	[TestFixture]
-	public class ConfigTests
+	public class ConfigTests : TestsBase
 	{
 		[Test]
 		public void Write()

@@ -4,7 +4,7 @@ using NUnit.Framework;
 namespace Wrenit.UnitTests
 {
 	[TestFixture]
-	public class SlotTests
+	public class SlotTests : TestsBase
 	{
 		private WrenVm _vm;
 

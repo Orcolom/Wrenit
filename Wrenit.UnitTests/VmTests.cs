@@ -4,7 +4,7 @@ using NUnit.Framework;
 namespace Wrenit.UnitTests
 {
 	[TestFixture]
-	public class VmTests
+	public class VmTests : TestsBase
 	{
 		[Test]
 		public void Vm()

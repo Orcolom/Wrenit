@@ -11,10 +11,10 @@ namespace Wrenit.Shared
 	}
 
 	[WrenModule("Math")]
-	[WrenImport(typeof(Constants), "PI")]
-	[WrenImport(typeof(Constants), typeof(Constants.Version))]
+	[WrenImport(typeof(ConstantsModule), "PI")]
+	[WrenImport(typeof(ConstantsModule), typeof(ConstantsModule.Version))]
 	[WrenImport("Constants", "Wrapper", "W")]
-	public class WrenMath
+	public class MathModule
 	{
 		[WrenManualSource]
 		private static string Raw1()
@@ -40,7 +40,7 @@ namespace Wrenit.Shared
 			[WrenManualSource]
 			private static string Raw1()
 			{
-				return @"static toString { ""{%(x), %(y)}"" }";
+				return @"toString { ""{%(x), %(y)}"" }";
 			}
 
 			[WrenMethod(WrenMethodType.Construct, "new", 2)]

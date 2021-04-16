@@ -26,14 +26,19 @@ namespace Wrenit
 			vm.AbortFiber(0);
 		}	
 		
-		public static WrenForeignObject<T> SetSlotNewForeign<T>(this WrenVm vm, int slot, int classSlot)
-		{
-			return vm.SetSlotNewForeign(slot, classSlot).As<T>();
-		}
-
 		public static WrenForeignObject<T> GetSlotForeign<T>(this WrenVm vm, int slot)
 		{
 			return vm.GetSlotForeign(slot).As<T>();
+		}
+		
+		public static void SetSlotInt(this WrenVm vm, int slot, int value)
+		{
+			vm.SetSlotDouble(slot, value);
+		}
+		
+		public static int GetSlotInt(this WrenVm vm, int slot)
+		{
+			return (int)vm.GetSlotDouble(slot);
 		}
 	}
 }

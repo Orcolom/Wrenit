@@ -3,7 +3,7 @@
 namespace Wrenit.Shared
 {
 	[WrenModule]
-	public class Constants
+	public class ConstantsModule
 	{
 		[WrenManualSource]
 		private static string Raw()
@@ -18,11 +18,18 @@ var Wrapper = ""Wrenit""
 		[WrenClass]
 		public static class Version
 		{
-			[WrenMethod(WrenMethodType.StaticMethod, "current")]
-			private static void GetVersion(WrenVm vm)
+			[WrenMethod(WrenMethodType.StaticMethod, "asString")]
+			private static void VersionString(WrenVm vm)
 			{
 				vm.EnsureSlots(1);
 				vm.SetSlotString(0, Wren.WrenVersionString);
+			}
+			
+			[WrenMethod(WrenMethodType.StaticMethod, "asMonotone")]
+			private static void VersionNumber(WrenVm vm)
+			{
+				vm.EnsureSlots(1);
+				vm.SetSlotInt(0, Wren.WrenVersionNumber);
 			}
 		}
 	}

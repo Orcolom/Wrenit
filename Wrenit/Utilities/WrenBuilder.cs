@@ -12,6 +12,7 @@ namespace Wrenit.Utilities
 	{
 		private static Dictionary<Type, WrenModule> _modules = new Dictionary<Type, WrenModule>();
 		private static Dictionary<Type, string> _names = new Dictionary<Type, string>();
+		private static List<Type> _foreignClasses = new List<Type>();
 
 		private static T GetAttribute<T>(this MemberInfo info)
 			where T : Attribute
@@ -40,6 +41,13 @@ namespace Wrenit.Utilities
 			return found;
 		}
 
+		public static void ClearCache()
+		{
+			_modules.Clear();
+			_names.Clear();
+			_foreignClasses.Clear();
+		}
+		
 		public static WrenModule Build<T>()
 		{
 			Type moduleType = typeof(T);
@@ -89,7 +97,7 @@ namespace Wrenit.Utilities
 				tuple.Item2 is WrenAllocatorAttribute && IsValidMethodSignature(tuple.Item1 as MethodInfo));
 
 			(MemberInfo, AWrenCodeAttribute) validFin = attributedMembers.Find(tuple =>
-				tuple.Item2 is WrenFinalizerAttribute && IsValidFInalizerSignature(tuple.Item1 as MethodInfo));
+				tuple.Item2 is WrenFinalizerAttribute && IsValidFinalizerSignature(tuple.Item1 as MethodInfo));
 
 			List<WrenAttributeAttribute> usedAttributes = new List<WrenAttributeAttribute>();
 
@@ -103,10 +111,18 @@ namespace Wrenit.Utilities
 
 			sb.Append($"class {className}");
 
-			string inherit = classAttribute.Inherit ?? GetName(classAttribute.InheritType); 
+			string inherit = classAttribute.Inherit;
+			if (string.IsNullOrEmpty(inherit) && classAttribute.InheritType != null)
+			{
+				inherit = GetName(classAttribute.InheritType);
+				if (string.IsNullOrEmpty(inherit))
+					throw new NullReferenceException($"Could not find build class of type {classAttribute.InheritType}");
+				if (_foreignClasses.Contains(classAttribute.InheritType))
+					throw new InvalidOperationException("Cant inherit from a foreign class");
+			}
 			if (string.IsNullOrEmpty(inherit) == false)
 			{
-				sb.Append($"	is {inherit}");
+				sb.Append($"	is {inherit} ");
 			}
 			sb.Append("{\n");
 
@@ -117,6 +133,7 @@ namespace Wrenit.Utilities
 			WrenFinalizer finalizer = null;
 			if (validAlloc.Item1 != null)
 			{
+				_foreignClasses.Add(classType);
 				allocator =
 					Delegate.CreateDelegate(typeof(WrenForeignMethod), validAlloc.Item1 as MethodInfo) as WrenForeignMethod;
 			}
@@ -196,7 +213,7 @@ namespace Wrenit.Utilities
 			sb.Append("\n// end manual source\n\n");
 		}
 
-		private static bool IsValidFInalizerSignature(MethodInfo methodInfo)
+		private static bool IsValidFinalizerSignature(MethodInfo methodInfo)
 		{
 			ParameterInfo[] parameterInfos = methodInfo.GetParameters();
 			if (parameterInfos.Length != 1) return false;
@@ -354,6 +371,7 @@ namespace Wrenit.Utilities
 		
 		public static string GetName(Type type)
 		{
+			if (type == null) return null;
 			return _names.TryGetValue(type, out string name) ? name : null;
 		}
 	}
