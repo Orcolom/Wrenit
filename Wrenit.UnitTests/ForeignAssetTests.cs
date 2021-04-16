@@ -26,7 +26,7 @@ System.write(asset.path)
 				Assert.AreEqual(path, text);
 			};
 				
-			WrenBuilder.Build<AssetsModule>().Bind(ref config);
+			WrenBuilder.GetModule<AssetsModule>().Bind(ref config);
 			
 			var vm = new WrenVm(config);
 			var result = vm.Interpret("<main>", main);
@@ -36,15 +36,15 @@ System.write(asset.path)
 		[Test]
 		public void ForeignClassInherit()
 		{
-			WrenBuilder.Build<AssetsModule>();
-			Assert.Throws<InvalidOperationException>(() => WrenBuilder.Build<AssetsModule2>(), "Should not be able to inherit");
+			WrenBuilder.GetModule<AssetsModule>();
+			Assert.Throws<InvalidOperationException>(() => WrenBuilder.GetModule<AssetsModule2>(), "Should not be able to inherit");
 		}
 		
 		[Test]
 		public void ForeignClassInherit2()
 		{
-			Assert.Throws<NullReferenceException>(() => WrenBuilder.Build<AssetsModule2>(), "Should not be able to inherit a class that doesnt exist");
-			WrenBuilder.Build<AssetsModule>();
+			Assert.Throws<NullReferenceException>(() => WrenBuilder.GetModule<AssetsModule2>(), "Should not be able to inherit a class that doesnt exist");
+			WrenBuilder.GetModule<AssetsModule>();
 		}
 	}
 }

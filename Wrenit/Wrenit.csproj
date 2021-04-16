@@ -49,6 +49,7 @@
     <Compile Include="Utilities\WrenMethodType.cs" />
     <Compile Include="Utilities\WrenModule.cs" />
     <Compile Include="Utilities\WrenSignature.cs" />
+    <Compile Include="Utilities\WrenSourceBuilder.cs" />
     <Compile Include="Wren.cs" />
     <Compile Include="WrenAssert.cs" />
     <Compile Include="WrenExtensions.cs" />

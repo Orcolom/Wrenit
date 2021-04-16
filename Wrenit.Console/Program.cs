@@ -22,7 +22,7 @@ System.write(asset.path)
 				Console.WriteLine("e");
 			};
 				
-			WrenBuilder.Build<AssetsModule>().Bind(ref config);
+			WrenBuilder.GetModule<AssetsModule>().Bind(ref config);
 			
 			var vm = new WrenVm(config);
 			var result = vm.Interpret("<main>", main);

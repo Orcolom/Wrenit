@@ -6,17 +6,17 @@ namespace Wrenit
 	{
 		public static void GetVariable<TModule, TName>(this WrenVm vm, int slot)
 		{
-			vm.GetVariable(WrenBuilder.GetName<TModule>(), WrenBuilder.GetName<TName>(), slot);
+			vm.GetVariable(WrenBuilder.GetResolvedName<TModule>(), WrenBuilder.GetResolvedName<TName>(), slot);
 		}	
 
 		public static bool HasVariable<TModule, TName>(this WrenVm vm)
 		{
-			return vm.HasVariable(WrenBuilder.GetName<TModule>(), WrenBuilder.GetName<TName>());
+			return vm.HasVariable(WrenBuilder.GetResolvedName<TModule>(), WrenBuilder.GetResolvedName<TName>());
 		}	
 
 		public static bool HasModule<TModule>(this WrenVm vm)
 		{
-			return vm.HasModule(WrenBuilder.GetName<TModule>());
+			return vm.HasModule(WrenBuilder.GetResolvedName<TModule>());
 		}	
 		
 		public static void AbortFiber(this WrenVm vm, string message)

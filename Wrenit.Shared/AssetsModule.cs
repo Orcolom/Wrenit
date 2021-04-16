@@ -38,13 +38,13 @@ namespace Wrenit.Shared
 				// get Asset class variable from module Assets and store in slot 0
 				if (vm.HasModule<AssetsModule>() == false)
 				{
-					vm.AbortFiber($"Cant find module {WrenBuilder.GetName<AssetsModule>()}");
+					vm.AbortFiber($"Cant find module {WrenBuilder.GetResolvedName<AssetsModule>()}");
 					return;
 				}
 
 				if (vm.HasVariable<AssetsModule, Asset>() == false)
 				{
-					vm.AbortFiber($"Cant find name {WrenBuilder.GetName<Asset>()} in module {WrenBuilder.GetName<AssetsModule>()}");
+					vm.AbortFiber($"Cant find name {WrenBuilder.GetResolvedName<Asset>()} in module {WrenBuilder.GetResolvedName<AssetsModule>()}");
 					return;
 				}
 				
