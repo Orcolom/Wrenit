@@ -68,10 +68,6 @@ namespace Wrenit.Utilities
 		private static WrenModule BuildNew<T>()
 		{
 			Type moduleType = typeof(T);
-			if (Modules.ContainsKey(moduleType))
-			{
-				return Modules[moduleType];
-			}
 
 			WrenModuleAttribute moduleAttribute = moduleType.GetAttribute<WrenModuleAttribute>();
 			if (moduleAttribute == null) return null;

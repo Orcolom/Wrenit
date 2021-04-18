@@ -46,7 +46,8 @@ namespace Wrenit.Utilities
 				for (int j = 0; j < attributesOfGroup.Count; j++)
 				{
 					WrenImportAttribute importAttribute = attributesOfGroup[j];
-					if (string.IsNullOrEmpty(importAttribute.For)) continue;
+					string @for = importAttribute.For ?? WrenBuilder.GetResolvedName(importAttribute.ForType);
+					if (string.IsNullOrEmpty(@for)) continue;
 
 					if (firstFor)
 					{
@@ -54,7 +55,6 @@ namespace Wrenit.Utilities
 						firstFor = false;
 					}
 
-					string @for = itAttribute.For ?? WrenBuilder.GetResolvedName(itAttribute.ForType);
 					_sb.Append(@for);
 
 					if (string.IsNullOrEmpty(importAttribute.As) == false)
