@@ -1,4 +1,5 @@
-﻿using Wrenit.Utilities;
+﻿using System.Globalization;
+using Wrenit.Utilities;
 
 namespace Wrenit
 {
@@ -39,6 +40,26 @@ namespace Wrenit
 		public static int GetSlotInt(this WrenVm vm, int slot)
 		{
 			return (int)vm.GetSlotDouble(slot);
+		}
+
+		public static void BindModule<T>(this WrenConfig config)
+		{
+			WrenBuilder.GetModule<T>().Bind(config);
+		}
+		
+		public static void UnBindModule<T>(this WrenConfig config)
+		{
+			WrenBuilder.GetModule<T>().UnBind(config);
+		}
+
+		public static string ToWrenSafeString(this double value)
+		{
+			return value.ToString(CultureInfo.InvariantCulture);
+		}
+		
+		public static string ToWrenSafeString(this float value)
+		{
+			return value.ToString(CultureInfo.InvariantCulture);
 		}
 	}
 }

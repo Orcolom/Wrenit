@@ -13,7 +13,7 @@ namespace Wrenit.Shared
 	[WrenModule("Math")]
 	[WrenImport(typeof(ConstantsModule), "PI")]
 	[WrenImport(typeof(ConstantsModule), typeof(ConstantsModule.Version))]
-	[WrenImport("Constants", "Wrapper", "W")]
+	[WrenImport("ConstantsModule", "Wrapper", "W")]
 	public class MathModule
 	{
 		[WrenManualSource]
@@ -70,14 +70,14 @@ namespace Wrenit.Shared
 				fo.TypedData.y *= vm.GetSlotDouble(1);
 			}
 
-			[WrenMethod(WrenMethodType.FieldGetter)]
+			[WrenMethod(WrenMethodType.FieldGetter, "x")]
 			public static void GetX(WrenVm vm)
 			{
 				var fo = vm.GetSlotForeign<Vector>(0);
 				vm.SetSlotDouble(0, fo.TypedData.x);
 			}
 
-			[WrenMethod(WrenMethodType.FieldSetter)]
+			[WrenMethod(WrenMethodType.FieldSetter, "x")]
 			public static void SetX(WrenVm vm)
 			{
 				var fo = vm.GetSlotForeign<Vector>(0);

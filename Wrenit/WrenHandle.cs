@@ -45,7 +45,8 @@ namespace Wrenit
 		public void Free(WrenVm vm)
 		{
 			if (IsAlive == false) return;
-			vm.RemoveHandle(Ptr);
+
+			vm.Cache.Handles.Remove(Ptr);
 			WrenImport.wrenReleaseHandle(vm.Ptr, Ptr);
 			Ptr = IntPtr.Zero;
 		}

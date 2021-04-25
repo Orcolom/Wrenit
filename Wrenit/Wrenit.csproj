@@ -52,6 +52,7 @@
     <Compile Include="Utilities\WrenSourceBuilder.cs" />
     <Compile Include="Wren.cs" />
     <Compile Include="WrenAssert.cs" />
+    <Compile Include="WrenCache.cs" />
     <Compile Include="WrenExtensions.cs" />
     <Compile Include="WrenForeignObject.cs" />
     <Compile Include="WrenHandle.cs" />

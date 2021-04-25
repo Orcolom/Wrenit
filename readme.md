@@ -14,7 +14,7 @@ Wrenit is a .net binding for [wren](wren_site) written in c#
 - [ ] full unit testing
 - [ ] write a special errors and messages handler so the user only receives one callback with all the info 
 - [ ] Write a decent example program
-- [ ] rewrite to work with il2cpp
+- [ ] rewrite to work with il2cpp (https://github.com/wren-lang/wren/pull/971#issuecomment-821973148)
 
 ## Usage
 

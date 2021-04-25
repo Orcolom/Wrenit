@@ -48,7 +48,7 @@
   <ItemGroup>
     <Compile Include="AssertTest.cs" />
     <Compile Include="ConfigTests.cs" />
-    <Compile Include="ForeignAssetTests.cs" />
+    <Compile Include="ForeignTests.cs" />
     <Compile Include="SetupTests.cs" />
     <Compile Include="SlotTests.cs" />
     <Compile Include="VmTests.cs" />

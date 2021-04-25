@@ -37,6 +37,11 @@ namespace Wrenit.Utilities
 		public readonly Type ForType;
 		public readonly string As;
 
+		public WrenImportAttribute(Type module)
+		{
+			ModuleType = module;
+		}
+		
 		public WrenImportAttribute(Type module, string @for = null, string @as = null)
 		{
 			ModuleType = module;

@@ -87,14 +87,14 @@ namespace Wrenit.Utilities
 						classes.Add(BuildClass(members[i].Item1 as Type, classAttribute, sb));
 						break;
 
-					case WrenManualSourceAttribute rawSourceAttribute:
+					case WrenManualSourceAttribute _:
 						AppendManualSource(members[i].Item1 as MethodInfo, sb);
 						break;
 				}
 			}
 
 			string source = sb.ToString();
-			WrenModule module = new WrenModule(moduleAttribute.Name ?? moduleType.Name, source, classes, moduleType);
+			WrenModule module = new WrenModule(moduleAttribute.Name ?? moduleType.Name, source, classes);
 			Modules.Add(moduleType, module);
 			Names.Add(moduleType, module.Name);
 			return module;
@@ -109,8 +109,6 @@ namespace Wrenit.Utilities
 
 			(MemberInfo, AWrenCodeAttribute) validFin = attributedMembers.Find(tuple =>
 				tuple.Item2 is WrenFinalizerAttribute && IsValidFinalizerSignature(tuple.Item1 as MethodInfo));
-
-			List<WrenAttributeAttribute> usedAttributes = new List<WrenAttributeAttribute>();
 
 			string className = classAttribute.Name ?? classType.Name;
 
@@ -131,7 +129,7 @@ namespace Wrenit.Utilities
 			List<WrenMethodAttribute> methodAttributes = new List<WrenMethodAttribute>();
 
 			WrenForeignMethod allocator = null;
-			WrenFinalizer finalizer = null;
+			WrenForeignFinalizer finalizer = null;
 			if (validAlloc.Item1 != null)
 			{
 				ForeignClasses.Add(classType);
@@ -142,7 +140,7 @@ namespace Wrenit.Utilities
 			if (validFin.Item1 != null)
 			{
 				finalizer =
-					Delegate.CreateDelegate(typeof(WrenFinalizer), validFin.Item1 as MethodInfo) as WrenFinalizer;
+					Delegate.CreateDelegate(typeof(WrenForeignFinalizer), validFin.Item1 as MethodInfo) as WrenForeignFinalizer;
 			}
 
 			for (int i = 0; i < attributedMembers.Count; i++)
@@ -180,7 +178,7 @@ namespace Wrenit.Utilities
 
 			sb.CloseClass();
 
-			var wrenClass = new WrenClass(classAttribute.Name ?? classType.Name, allocator, finalizer, methods, classType);
+			var wrenClass = new WrenClass(classAttribute.Name ?? classType.Name, allocator, finalizer, methods);
 			Names.Add(classType, wrenClass.Name);
 			return wrenClass;
 		}

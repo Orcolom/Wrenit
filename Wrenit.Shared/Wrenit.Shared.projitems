@@ -12,5 +12,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)AssetsModule.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ConstantsModule.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MathModule.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)FailModules.cs" />
   </ItemGroup>
 </Project>

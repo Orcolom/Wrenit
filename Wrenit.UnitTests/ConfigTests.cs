@@ -8,13 +8,58 @@ namespace Wrenit.UnitTests
 	public class ConfigTests : TestsBase
 	{
 		[Test]
+		public void Modules()
+		{
+			var metaSource = @"
+import ""meta"" for Meta
+
+var source = """"""
+	System.print(6)
+""""""
+
+Meta.eval(source)
+";
+			var randomSource = @"
+import ""random"" for Random
+
+var r = Random.new(12345)
+";
+
+			var config = new WrenConfig();
+			Assert.AreEqual(WrenModules.All, config.OptionalModules);
+			
+			config.OptionalModules = WrenModules.None;
+			var result = new WrenVm(config).Interpret("m", metaSource);
+			if (result != WrenInterpretResult.RuntimeError) Assert.Fail("expected a runtime fail");
+			result = new WrenVm(config).Interpret("m", randomSource);
+			if (result != WrenInterpretResult.RuntimeError) Assert.Fail("expected a runtime fail");
+
+			config.OptionalModules = WrenModules.ModuleMeta;
+			result = new WrenVm(config).Interpret("m", metaSource);
+			if (result != WrenInterpretResult.Success) Assert.Fail("expected a successfull run");
+			result = new WrenVm(config).Interpret("m", randomSource);
+			if (result != WrenInterpretResult.RuntimeError) Assert.Fail("expected a runtime fail");
+
+			config.OptionalModules = Wrenit.WrenModules.ModuleRandom;
+			result = new WrenVm(config).Interpret("m", metaSource);
+			if (result != WrenInterpretResult.RuntimeError) Assert.Fail("expected a runtime fail");
+			result = new WrenVm(config).Interpret("m", randomSource);
+			if (result != WrenInterpretResult.Success) Assert.Fail("expected a successfull run");
+		}
+
+		[Test]
 		public void Write()
 		{
 			string msg = "abc";
+			bool called = false;
 
-			WrenConfig config = WrenConfig.GetDefaults();
+			WrenConfig config = new WrenConfig();
 
-			config.WriteHandler += (_, text) => { Assert.AreEqual(text, msg); };
+			config.WriteHandler += (_, text) =>
+			{
+				called = true;
+				Assert.AreEqual(text, msg);
+			};
 
 			config.ErrorHandler += (vm, result, module, line, message) =>
 			{
@@ -22,38 +67,68 @@ namespace Wrenit.UnitTests
 			};
 
 			new WrenVm(config).Interpret("m", $"System.write(\"{msg}\")");
+			Assert.IsTrue(called);
+		}
+
+
+		[Test]
+		public void WriteAfter()
+		{
+			string msg = "abc";
+			bool called = false;
+
+			var vm = new WrenVm();
+
+			vm.Config.WriteHandler += (_, text) =>
+			{
+				called = true;
+				Assert.AreEqual(text, msg);
+			};
+
+			vm.Config.ErrorHandler += (vm, result, module, line, message) =>
+			{
+				Assert.IsTrue(false, "script execution failed");
+			};
+
+			vm.Interpret("m", $"System.write(\"{msg}\")");
+			Assert.IsTrue(called);
 		}
 
 		[Test]
 		public void CompileError()
 		{
 			string msg = ";";
+			bool called = false;
 
-			WrenConfig config = WrenConfig.GetDefaults();
+			WrenConfig config = new WrenConfig();
 
 			config.WriteHandler += (_, text) => { Assert.IsTrue(false, "should not be hit"); };
 
 			config.ErrorHandler = (vm, result, module, line, message) =>
 			{
+				called = true;
 				Assert.AreEqual(WrenErrorType.CompileError, result);
 				Assert.IsTrue(message.Contains(msg));
 			};
 
 			new WrenVm(config).Interpret("m", $"System.write(\"abc\"){msg}");
+			Assert.IsTrue(called);
 		}
 
 		[Test]
 		public void RuntimeError()
 		{
 			string msg = "writ";
-
-			WrenConfig config = WrenConfig.GetDefaults();
+			bool called = false;
+			
+			WrenConfig config = new WrenConfig();
 
 			config.WriteHandler += (_, text) => { Assert.IsTrue(false, "should not be hit"); };
 
 			bool first = true;
 			config.ErrorHandler = (vm, result, module, line, message) =>
 			{
+				called = true;
 				if (first)
 				{
 					Assert.AreEqual(WrenErrorType.RuntimeError, result);
@@ -69,6 +144,41 @@ namespace Wrenit.UnitTests
 			};
 
 			new WrenVm(config).Interpret("m", $"System.{msg}(\"abc\")");
+			Assert.IsTrue(called);
+		}
+
+		[Test]
+		public void LoadModule()
+		{
+			string importerModule = "main";
+			string inputModule = "hello";
+			bool called = false;
+			bool expectFail = false;
+
+			WrenConfig config = new WrenConfig();
+
+			config.LoadModuleHandler += (vm, name) =>
+			{
+				called = true;
+				if (name != inputModule)
+				{
+					Assert.True(expectFail, $"did not expect module of name {name}");
+					return null;
+				}
+
+				return $"var {name} = \"{name}\"";
+			};
+			config.ErrorHandler += (vm, result, module, line, message) => { };
+
+			WrenInterpretResult res =
+				new WrenVm(config).Interpret(importerModule, $"import \"{inputModule}\" for {inputModule}");
+			if (res != WrenInterpretResult.Success) Assert.Fail("Failed interpretation");
+
+			expectFail = true;
+			res = new WrenVm(config).Interpret(importerModule, $"import \"willFail\" for willFail");
+			if (res != WrenInterpretResult.RuntimeError) Assert.Fail("Expected runtime error");
+			
+			Assert.IsTrue(called);
 		}
 
 		[Test]
@@ -81,7 +191,7 @@ namespace Wrenit.UnitTests
 
 			bool expectFail = false;
 
-			WrenConfig config = WrenConfig.GetDefaults();
+			WrenConfig config = new WrenConfig();
 			config.ResolveModuleHandler += (vm, importer, name) =>
 			{
 				Assert.AreEqual(importer, importerModule);
@@ -128,9 +238,9 @@ namespace Wrenit.UnitTests
 		public void BindMethod()
 		{
 			string classA = "AClass";
-			WrenForeignMethodBinding bindingA = new WrenForeignMethodBinding(vm => { });
+			WrenForeignMethod bindingA = vm => { };
 
-			WrenConfig config = WrenConfig.GetDefaults();
+			WrenConfig config = new WrenConfig();
 			config.WriteHandler += (vm, text) => { Assert.AreEqual(text, classA); };
 			config.ErrorHandler += (vm, type, module, line, message) => { };
 
@@ -172,20 +282,18 @@ namespace Wrenit.UnitTests
 			void InitA(WrenVm vm) { }
 			void InitB(WrenVm vm) { }
 
-			WrenConfig config = WrenConfig.GetDefaults();
+			WrenConfig config = new WrenConfig();
 			config.BindForeignMethodHandler += (vm, module, name, isStatic, signature) =>
 			{
-				if (name == className) return new WrenForeignMethodBinding(InitA);
-				return new WrenForeignMethodBinding(InitB);
+				if (name == className) return InitA;
+				return InitB;
 			};
 
 			config.BindForeignClassHandler += (vm, module, name) =>
 			{
 				if (name == className)
 				{
-					return new WrenForeignClassBinding(
-						new WrenForeignMethodBinding(Alloc)
-					);
+					return new WrenForeignClass(Alloc);
 				}
 
 				return null;

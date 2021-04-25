@@ -491,14 +491,14 @@ namespace Wrenit.Interop
 	//
 	// - To free memory, [memory] will be the memory to free and [newSize] will be
 	//   zero. It should return NULL.
-	internal delegate IntPtr WrenReallocateFn(IntPtr memory, UIntPtr newSize, IntPtr userData);
+	internal delegate IntPtr InteropWrenReallocateFn(IntPtr memory, UIntPtr newSize, IntPtr userData);
 	
 	/// <summary>
 	/// display text to the user
 	/// </summary>
 	/// <param name="vm">pointer to c vm</param>
 	/// <param name="text">text to display</param>
-	internal delegate void WrenWriteFn(IntPtr vm,
+	internal delegate void InteropWrenWrite(IntPtr vm,
 		[MarshalAs(UnmanagedType.LPStr)] string text);
 
 	/// <summary>
@@ -525,7 +525,7 @@ namespace Wrenit.Interop
 	/// <param name="module">module name</param>
 	/// <param name="line">line position</param>
 	/// <param name="message">the message</param>
-	internal delegate void WrenErrorFn(IntPtr vm,
+	internal delegate void InteropWrenError(IntPtr vm,
 		WrenErrorType type,
 		[MarshalAs(UnmanagedType.LPStr)] string module,
 		int line,
@@ -570,7 +570,7 @@ namespace Wrenit.Interop
 	/// </para>
 	/// 
 	/// </summary>
-	internal delegate IntPtr WrenResolveModuleFn(IntPtr vm,
+	internal delegate IntPtr InteropWrenResolveModule(IntPtr vm,
 		[MarshalAs(UnmanagedType.LPStr)] string importer,
 		IntPtr name);
 
@@ -580,7 +580,7 @@ namespace Wrenit.Interop
 	/// <param name="vm">pointer to the c vm</param>
 	/// <param name="name">name of the module</param>
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-	internal delegate InteropWrenLoadModuleResult WrenLoadModuleFn(IntPtr vm,
+	internal delegate InteropWrenLoadModuleResult InteropWrenLoadModule(IntPtr vm,
 		[MarshalAs(UnmanagedType.LPStr)] string name);
 
 	/// <summary>
@@ -590,7 +590,7 @@ namespace Wrenit.Interop
 	/// <param name="vm">pinter to the c vm</param>
 	/// <param name="name">name of the module</param>
 	/// <param name="result">result created by <see cref="F:InterlopWrenConfiguration.LoadModuleFn"/></param>
-	internal delegate void WrenLoadModuleCompleteFn(IntPtr vm,
+	internal delegate void InteropWrenLoadModuleComplete(IntPtr vm,
 		[MarshalAs(UnmanagedType.LPStr)] string name,
 		InteropWrenLoadModuleResult result);
 
@@ -602,7 +602,7 @@ namespace Wrenit.Interop
 	/// <param name="className">class name</param>
 	/// <param name="isStatic">is function static</param>
 	/// <param name="signature">function signature</param>
-	internal delegate IntPtr WrenBindForeignMethodFn(IntPtr vm,
+	internal delegate InteropBindForeignMethodResult InteropWrenBindForeignMethod(IntPtr vm,
 		[MarshalAs(UnmanagedType.LPStr)] string module,
 		[MarshalAs(UnmanagedType.LPStr)] string className,
 		[MarshalAs(UnmanagedType.I1)] bool isStatic,
@@ -615,7 +615,7 @@ namespace Wrenit.Interop
 	/// <param name="vm">pointer to c vm</param>
 	/// <param name="module">module name</param>
 	/// <param name="className">class name</param>
-	internal delegate InteropWrenForeignClassMethods WrenBindForeignClassFn(IntPtr vm,
+	internal delegate InteropWrenForeignClassMethods InteropWrenBindForeignClass(IntPtr vm,
 		[MarshalAs(UnmanagedType.LPStr)] string module,
 		[MarshalAs(UnmanagedType.LPStr)] string className);
 
@@ -623,7 +623,13 @@ namespace Wrenit.Interop
 	/// A function callable from Wren code, but implemented in C#.
 	/// </summary>
 	/// <param name="vm"></param>
-	internal delegate void InteropWrenForeignMethodFn(IntPtr vm);
+	internal delegate void InteropWrenForeignMethod(IntPtr vm, IntPtr userData);
+
+	/// <summary>
+	/// A function callable from Wren code, but implemented in C#.
+	/// </summary>
+	/// <param name="vm"></param>
+	internal delegate void InteropWrenForeignFinalizer(IntPtr data, IntPtr userData);
 
 	internal struct InteropWrenForeignClassMethods
 	{
@@ -634,6 +640,12 @@ namespace Wrenit.Interop
 		/// it must call <see cref="WrenImport.wrenSetSlotNewForeign"/> exactly once.
 		/// </summary>
 		public IntPtr AllocateFn;
+
+
+		/// <summary>
+		/// user data bound to allocatFn
+		/// </summary>
+		public IntPtr UserData;
 
 		/// <summary>
 		/// The callback invoked when the garbage collector is about to collect a foreign object's memory.
@@ -664,6 +676,17 @@ namespace Wrenit.Interop
 	/// interop struct for WrenConfiguration
 	/// </summary>
 	[StructLayout(LayoutKind.Sequential)]
+	internal struct InteropBindForeignMethodResult
+	{
+		public IntPtr ExecuteFn;
+		public IntPtr UserData;
+	}
+	
+
+	/// <summary>
+	/// interop struct for WrenConfiguration
+	/// </summary>
+	[StructLayout(LayoutKind.Sequential)]
 	internal class InteropWrenConfiguration
 	{
 		/// <summary>
@@ -671,11 +694,11 @@ namespace Wrenit.Interop
 		///		If `null`, defaults to a built-in function that uses `realloc` and `free`.
 		/// </summary>
 		[MarshalAs(UnmanagedType.FunctionPtr)]
-		public WrenReallocateFn ReallocateFn;
+		public InteropWrenReallocateFn ReallocateFn;
 
-		/// <inheritdoc cref="WrenResolveModuleFn"/>
+		/// <inheritdoc cref="InteropWrenResolveModule"/>
 		[MarshalAs(UnmanagedType.FunctionPtr)]
-		public WrenResolveModuleFn ResolveModuleFn;
+		public InteropWrenResolveModule ResolveModuleFn;
 
 		/// <summary>
 		/// The callback Wren uses to load a module.
@@ -701,7 +724,7 @@ namespace Wrenit.Interop
 		/// </para>
 		/// </summary>
 		[MarshalAs(UnmanagedType.FunctionPtr)]
-		public WrenLoadModuleFn LoadModuleFn;
+		public InteropWrenLoadModule LoadModuleFn;
 
 		/// <summary>
 		///	The callback Wren uses to find a foreign method and bind it to a class.
@@ -719,7 +742,7 @@ namespace Wrenit.Interop
 		/// </para>
 		/// </summary>
 		[MarshalAs(UnmanagedType.FunctionPtr)]
-		public WrenBindForeignMethodFn BindForeignMethodFn;
+		public InteropWrenBindForeignMethod BindForeignMethodFn;
 
 		/// <summary>
 		/// The callback Wren uses to find a foreign class and get its foreign methods.
@@ -732,15 +755,15 @@ namespace Wrenit.Interop
 		/// </para>
 		/// </summary>
 		[MarshalAs(UnmanagedType.FunctionPtr)]
-		public WrenBindForeignClassFn BindForeignClassFn;
+		public InteropWrenBindForeignClass BindForeignClassFn;
 
-		/// <inheritdoc cref="WrenWriteFn"/>
+		/// <inheritdoc cref="InteropWrenWrite"/>
 		[MarshalAs(UnmanagedType.FunctionPtr)]
-		public WrenWriteFn WriteFn;
+		public InteropWrenWrite WriteFn;
 
-		/// <inheritdoc cref="WrenErrorFn"/>
+		/// <inheritdoc cref="InteropWrenError"/>
 		[MarshalAs(UnmanagedType.FunctionPtr)]
-		public WrenErrorFn ErrorFn;
+		public InteropWrenError ErrorFn;
 
 		/// <summary>
 		///	The number of bytes Wren will allocate before triggering the first garbage collection.

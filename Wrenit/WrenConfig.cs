@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Wrenit.Interop;
 
 namespace Wrenit
@@ -6,29 +7,24 @@ namespace Wrenit
 
 	public interface IWrenUtility
 	{
-		public void Bind(ref WrenConfig config);
-		public void Unbind(ref WrenConfig config);
+		public void Bind(WrenConfig config);
+		public void UnBind(WrenConfig config);
+	}
+
+	[Flags]
+	public enum WrenModules
+	{
+		None = 0,
+		ModuleMeta = 1,
+		ModuleRandom = 2,
+		All = ModuleMeta & ModuleRandom,
 	}
 	
 	/// <summary>
 	/// Configuration used to handle wren callbacks
 	/// </summary>
-	public struct WrenConfig
+	public class WrenConfig
 	{
-		// TODO: static nullables broke unit tests?
-		/// <summary>
-		/// cached version of the default wren values
-		/// </summary>
-		private static WrenConfig _default;
-		
-		/// <summary>
-		/// has a cached version of the defaults
-		/// </summary>
-		private static bool _hasDefaults;
-		
-		/// <inheritdoc cref="InteropWrenConfiguration.ReallocateFn"/>
-		internal static WrenReallocateFn DefaultReallocateFn;
-
 		/// <summary>
 		/// lift of bindable elements bound to this config 
 		/// </summary>
@@ -114,7 +110,7 @@ namespace Wrenit
 		/// <para>
 		/// 	When a foreign method is declared in a class, this will be called with the
 		/// 	foreign method's module, class, and signature when the class body is
-		/// 	executed. It should return a <see cref="WrenForeignMethodBinding"/> to the foreign function that will be
+		/// 	executed. It should return a <see cref="WrenForeignMethod"/> to the foreign function that will be
 		/// 	bound to that method.
 		/// </para>
 		///
@@ -138,6 +134,11 @@ namespace Wrenit
 		public WrenBindForeignClass BindForeignClassHandler;
 
 		/// <summary>
+		/// optional modules
+		/// </summary>
+		public WrenModules OptionalModules;
+		
+		/// <summary>
 		/// add a utility class to this config. should be called from inside of <see cref="IWrenUtility.Bind"/>
 		/// </summary>
 		public void AddToCache(IWrenUtility utility)
@@ -147,34 +148,21 @@ namespace Wrenit
 		}
 
 		/// <summary>
-		/// remove a utility class from this config. should be called from inside of <see cref="IWrenUtility.Unbind"/>
+		/// remove a utility class from this config. should be called from inside of <see cref="IWrenUtility.UnBind"/>
 		/// </summary>
 		public void RemoveFromCache(IWrenUtility utility)
 		{
 			_bindables?.Remove(utility);
 		}
 		
-		/// <summary>
-		/// Get a default config structure 
-		/// </summary>
-		/// <returns></returns>
-		public static WrenConfig GetDefaults()
+		public WrenConfig()
 		{
-			if (_hasDefaults) return _default;
-			InteropWrenConfiguration wrenConfig = new InteropWrenConfiguration();
-			WrenImport.wrenInitConfiguration(wrenConfig);
-
-			DefaultReallocateFn = wrenConfig.ReallocateFn;
+			Wren.Initialize();
 			
-			_hasDefaults = true;
-			_default = new WrenConfig()
-			{
-				HeapGrowthPercent = wrenConfig.HeapGrowthPercent,
-				InitialHeapSize = wrenConfig.InitialHeapSize.ToUInt64(),
-				MinHeapSize = wrenConfig.InitialHeapSize.ToUInt64(),
-			};
-
-			return _default;
+			OptionalModules = WrenModules.All;
+			HeapGrowthPercent = Wren.DefaultConfig.HeapGrowthPercent;
+			InitialHeapSize = Wren.DefaultConfig.InitialHeapSize.ToUInt64();
+			MinHeapSize = Wren.DefaultConfig.InitialHeapSize.ToUInt64();
 		}
 	}
 }

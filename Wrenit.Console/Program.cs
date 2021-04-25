@@ -16,15 +16,15 @@ var asset = AssetSystem.Load(""{path}"")
 
 System.write(asset.path)
 ";
-			var config = WrenConfig.GetDefaults();
+			var config = new WrenConfig();
 			config.WriteHandler += (wrenVm, text) =>
 			{
 				Console.WriteLine("e");
 			};
 				
-			WrenBuilder.GetModule<AssetsModule>().Bind(ref config);
-			
 			var vm = new WrenVm(config);
+			vm.Config.BindModule<AssetsModule>();
+			
 			var result = vm.Interpret("<main>", main);
 			Console.WriteLine("x");
 		}

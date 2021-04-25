@@ -12,27 +12,7 @@ namespace Wrenit
 	/// </summary>
 	public sealed class WrenVm : IDisposable
 	{
-		/// <summary>
-		/// list of all active vm's
-		/// </summary>
-		private static readonly Dictionary<IntPtr, WeakReference<WrenVm>> VmList =
-			new Dictionary<IntPtr, WeakReference<WrenVm>>();
-
-		/// <summary>
-		/// list of foreign objects created by the vm. They dont get garbage collected without disposing them 
-		/// </summary>
-		private static readonly Dictionary<IntPtr, WrenForeignObject>
-			ForeignObjects = new Dictionary<IntPtr, WrenForeignObject>();
-		
-		/// <summary>
-		/// last used foreign id if no unused foreign ids are available
-		/// </summary>
-		private static int _lastForeignId = 0;
-		
-		/// <summary>
-		/// list of handles created by the vm. They dont get garbage collected without disposing them 
-		/// </summary>
-		private readonly Dictionary<IntPtr, WrenHandle> _handles = new Dictionary<IntPtr, WrenHandle>();
+		internal readonly WrenCache Cache;
 
 		/// <summary>
 		/// pointer to c vm
@@ -42,7 +22,7 @@ namespace Wrenit
 		/// <summary>
 		/// the used config
 		/// </summary>
-		private readonly WrenConfig _config;
+		public WrenConfig Config { get; }
 
 		/// <summary>
 		/// is the vm currently alive
@@ -54,40 +34,35 @@ namespace Wrenit
 		/// <summary>
 		/// create a new vm with all default values 
 		/// </summary>
-		public WrenVm()
-		{
-			Wren.Initialize();
-			Ptr = WrenImport.wrenNewVM(null);
-			VmList.Add(Ptr, new WeakReference<WrenVm>(this));
-		}
+		public WrenVm() : this(null) { }
 
 		/// <summary>
-		/// create a new vm with provided settings and bindings
+		/// create a new vm with provided settings and bindings. 
+		///
 		/// </summary>
 		/// <param name="wrenConfig"></param>
 		public WrenVm(WrenConfig wrenConfig)
 		{
 			Wren.Initialize();
-			_config = wrenConfig;
 
-			InteropWrenConfiguration interopConfiguration = new InteropWrenConfiguration
+			Config = wrenConfig ?? new WrenConfig();
+			Cache = new WrenCache();
+
+			var interopConfiguration = new InteropWrenConfiguration
 			{
-				InitialHeapSize = new UIntPtr(wrenConfig.InitialHeapSize),
-				MinHeapSize = new UIntPtr(wrenConfig.MinHeapSize),
-				HeapGrowthPercent = wrenConfig.HeapGrowthPercent,
+				InitialHeapSize = new UIntPtr(Config.InitialHeapSize),
+				MinHeapSize = new UIntPtr(Config.MinHeapSize),
+				HeapGrowthPercent = Config.HeapGrowthPercent,
+				WriteFn = Wren.OnWrenWrite,
+				ErrorFn = Wren.OnWrenError,
+				ResolveModuleFn = Wren.OnWrenResolveModule,
+				LoadModuleFn = Wren.OnWrenLoadModule,
+				BindForeignMethodFn = Wren.OnWrenBindForeignMethod,
+				BindForeignClassFn = Wren.OnWrenBindForeignClass,
 			};
 
-			// make native "bindings" for wanted functions
-			if (wrenConfig.WriteHandler != null) interopConfiguration.WriteFn = OnWrenWrite;
-			if (wrenConfig.ErrorHandler != null) interopConfiguration.ErrorFn = OnWrenError;
-			if (wrenConfig.ResolveModuleHandler != null) interopConfiguration.ResolveModuleFn = OnWrenResolveModule;
-			if (wrenConfig.LoadModuleHandler != null) interopConfiguration.LoadModuleFn = OnWrenLoadModule;
-			if (wrenConfig.BindForeignMethodHandler != null)
-				interopConfiguration.BindForeignMethodFn = OnWrenBindForeignMethod;
-			if (wrenConfig.BindForeignClassHandler != null) interopConfiguration.BindForeignClassFn = OnWrenBindForeignClass;
-
 			Ptr = WrenImport.wrenNewVM(interopConfiguration);
-			VmList.Add(Ptr, new WeakReference<WrenVm>(this));
+			WrenCache.AddVm(Ptr, this);
 		}
 
 		~WrenVm()
@@ -111,76 +86,24 @@ namespace Wrenit
 		{
 			if (IsAlive == false) return;
 
-			Dictionary<IntPtr, WrenHandle> handles = new Dictionary<IntPtr, WrenHandle>(_handles);
+			var handles = new Dictionary<IntPtr, WrenHandle>(Cache.Handles);
 			foreach (var pair in handles)
 			{
 				pair.Value.Free(this);
 			}
 
-			handles.Clear();
+			Cache.Handles.Clear();
 
 			WrenImport.wrenFreeVM(Ptr);
-			VmList.Remove(Ptr);
+			WrenCache.RemoveVm(Ptr);
 
 			Ptr = IntPtr.Zero;
 		}
 
 		#endregion
 
-		#region Internal Access
-
-		/// <summary>
-		/// Get a vm via its c pointer
-		/// </summary>
-		/// <param name="ptr"></param>
-		/// <returns></returns>
-		internal static WrenVm GetVm(IntPtr ptr)
-		{
-			if (VmList.TryGetValue(ptr, out WeakReference<WrenVm> weakRef) == false) return null;
-			if (weakRef.TryGetTarget(out WrenVm vm) == false) return null;
-			if (vm.IsAlive == false) return null;
-
-			return vm;
-		}
-
-		/// <summary>
-		/// remove a foreign object from this vm's list.
-		/// Note this does not free the object
-		/// </summary>
-		/// <param name="id">pointer of the object</param>
-		internal static void RemoveForeignObject(IntPtr id)
-		{
-			if (ForeignObjects.ContainsKey(id) == false) return;
-
-			ForeignObjects.Remove(id);
-		}
-
-		/// <summary>
-		/// remove a handle from the vm's list.
-		/// Note this does not free the object
-		/// </summary>
-		/// <param name="handlePtr">pointer of the handle</param>
-		internal void RemoveHandle(IntPtr handlePtr)
-		{
-			_handles.Remove(handlePtr);
-		}
-
-		/// <summary>
-		/// get foreign object by its id
-		/// </summary>
-		/// <param name="id">id of the foreign object</param>
-		/// <returns>returns object if found</returns>
-		internal static WrenForeignObject GetForeignById(IntPtr id)
-		{
-			if (ForeignObjects.ContainsKey(id) == false) return null;
-
-			return ForeignObjects[id];
-		}
-
-		#endregion
-
 		#region Run
-		
+
 		/// <summary>
 		/// Runs <paramref name="source"/>, a string of Wren source code in a new fiber in the context of <paramref name="module"/>.
 		/// </summary>
@@ -211,8 +134,8 @@ namespace Wrenit
 		{
 			this.AssertAlive();
 			IntPtr handlePtr = WrenImport.wrenMakeCallHandle(Ptr, signature);
-			WrenSignatureHandle handle = new WrenSignatureHandle(this, handlePtr);
-			_handles.Add(handlePtr, handle);
+			var handle = new WrenSignatureHandle(this, handlePtr);
+			Cache.Handles.Add(handlePtr, handle);
 			return handle;
 		}
 
@@ -247,147 +170,6 @@ namespace Wrenit
 		public void ReleaseHandle(WrenHandle handle)
 		{
 			handle?.Dispose();
-		}
-
-		#endregion
-
-		#region Bindings
-
-		/// <inheritdoc cref="WrenWriteFn"/>
-		private void OnWrenWrite(IntPtr vm, string text)
-		{
-			Delegate[] list = _config.WriteHandler.GetInvocationList();
-			for (int i = 0; i < list.Length; i++)
-			{
-				WrenWrite write = list[i] as WrenWrite;
-				write?.Invoke(this, text);
-			}
-		}
-
-		/// <inheritdoc cref="WrenErrorFn"/>
-		private void OnWrenError(IntPtr vm, WrenErrorType type, string module, int line, string message)
-		{
-			Delegate[] list = _config.ErrorHandler.GetInvocationList();
-			for (int i = 0; i < list.Length; i++)
-			{
-				WrenError error = list[i] as WrenError;
-				error?.Invoke(this, type, module, line, message);
-			}
-		}
-
-		/// <inheritdoc cref="WrenResolveModuleFn"/>
-		private IntPtr OnWrenResolveModule(IntPtr vm, string importer, IntPtr namePtr)
-		{
-			string name = Marshal.PtrToStringAnsi(namePtr);
-			string resolved = null;
-
-			Delegate[] list = _config.ResolveModuleHandler.GetInvocationList();
-			for (int i = 0; i < list.Length; i++)
-			{
-				WrenResolveModule resolve = list[i] as WrenResolveModule;
-				resolved = resolve?.Invoke(this, importer, name);
-				if (string.IsNullOrEmpty(resolved) == false) break;
-			}
-
-			if (resolved == name || string.IsNullOrEmpty(resolved)) return namePtr;
-
-			// the name needs to be given in wren's managed memory
-			// 1. create an char* string
-			IntPtr unmanagedName = Marshal.StringToHGlobalAnsi(resolved);
-			UIntPtr size = new UIntPtr((uint) (resolved.Length + 1) * (uint) IntPtr.Size);
-
-			// 2. create pointer using same allocator that wren uses 
-			IntPtr ptr = WrenConfig.DefaultReallocateFn.Invoke(IntPtr.Zero, size, IntPtr.Zero);
-
-			// 3. copy char* string over
-			unsafe
-			{
-				Buffer.MemoryCopy(unmanagedName.ToPointer(), ptr.ToPointer(), size.ToUInt64(), size.ToUInt64());
-			}
-
-			Marshal.FreeHGlobal(unmanagedName);
-
-			// 4. return wren managed pointer
-			return ptr;
-		}
-
-		/// <inheritdoc cref="WrenLoadModuleFn"/>
-		private InteropWrenLoadModuleResult OnWrenLoadModule(IntPtr vm, string name)
-		{
-			Delegate[] list = _config.LoadModuleHandler.GetInvocationList();
-			for (int i = 0; i < list.Length; i++)
-			{
-				WrenLoadModule load = list[i] as WrenLoadModule;
-
-				string result = load?.Invoke(this, name);
-				if (string.IsNullOrEmpty(result)) continue;
-
-				IntPtr ptr = Marshal.StringToCoTaskMemAnsi(result);
-				return new InteropWrenLoadModuleResult()
-				{
-					Source = ptr,
-					UserData = ptr,
-					OnComplete = Marshal.GetFunctionPointerForDelegate<WrenLoadModuleCompleteFn>(OnWrenLoadComplete),
-				};
-			}
-
-			return new InteropWrenLoadModuleResult();
-		}
-
-		/// <inheritdoc cref="WrenLoadModuleCompleteFn"/>
-		private void OnWrenLoadComplete(IntPtr vm, string name, InteropWrenLoadModuleResult result)
-		{
-			Marshal.FreeHGlobal(result.UserData);
-		}
-
-		/// <inheritdoc cref="WrenBindForeignMethodFn"/>
-		private InteropWrenForeignClassMethods OnWrenBindForeignClass(IntPtr vm, string module, string className)
-		{
-			Delegate[] list = _config.BindForeignClassHandler.GetInvocationList();
-			for (int i = 0; i < list.Length; i++)
-			{
-				WrenBindForeignClass foreign = list[i] as WrenBindForeignClass;
-				WrenForeignClassBinding classBinding = foreign?.Invoke(this, module, className);
-				if (classBinding?.Allocator == null) continue;
-
-				return new InteropWrenForeignClassMethods()
-				{
-					AllocateFn = classBinding.Allocator.MethodPtr,
-					FinalizeFn = classBinding.Finalizer.MethodPtr,
-				};
-			}
-
-			// wren defaults to aborting when no allocator is defined
-			// to avoid sudden aborts we pass a dummy allocator, the following construct **will** fail
-			// resulting in a safe WrenInterpretError.RuntimeError
-			_config.ErrorHandler?.Invoke(this, WrenErrorType.WrenitRuntimeError, module, -1,
-				$"Allocator for foreign {className} not defined in bindings");
-			return new InteropWrenForeignClassMethods()
-			{
-				AllocateFn = _notImplementedBinding.MethodPtr,
-			};
-		}
-
-		// catch all to avoid aborts
-		private readonly WrenForeignMethodBinding _notImplementedBinding =
-			new WrenForeignMethodBinding(NotImplementedForeign);
-
-		private static void NotImplementedForeign(WrenVm vm) { }
-
-		/// <inheritdoc cref="WrenBindForeignMethodFn"/>
-		private IntPtr OnWrenBindForeignMethod(IntPtr vm, string module, string className, bool isStatic, string signature)
-		{
-			Delegate[] list = _config.BindForeignMethodHandler.GetInvocationList();
-			for (int i = 0; i < list.Length; i++)
-			{
-				WrenBindForeignMethod foreign = list[i] as WrenBindForeignMethod;
-				WrenForeignMethodBinding methodBinding = foreign?.Invoke(this, module, className, isStatic, signature);
-				if (methodBinding == null) continue;
-
-				return methodBinding.MethodPtr;
-			}
-
-			return IntPtr.Zero;
 		}
 
 		#endregion
@@ -506,7 +288,7 @@ namespace Wrenit
 		public string GetSlotString(int slot)
 		{
 			this.AssertSlot(slot, WrenValueType.String);
-			IntPtr intPtr =  WrenImport.wrenGetSlotString(Ptr, slot);
+			IntPtr intPtr = WrenImport.wrenGetSlotString(Ptr, slot);
 			return Marshal.PtrToStringAnsi(intPtr);
 		}
 
@@ -545,8 +327,8 @@ namespace Wrenit
 		{
 			this.AssertSlot(slot);
 			IntPtr handlePtr = WrenImport.wrenGetSlotHandle(Ptr, slot);
-			WrenHandle handle = new WrenHandle(this, handlePtr);
-			_handles.Add(handlePtr, handle);
+			var handle = new WrenHandle(this, handlePtr);
+			Cache.Handles.Add(handlePtr, handle);
 			return handle;
 		}
 
@@ -734,19 +516,16 @@ namespace Wrenit
 		{
 			this.AssertSlot(slot);
 			this.AssertSlot(classSlot);
-			
-			_lastForeignId++;
-			if (_lastForeignId == 0) _lastForeignId++;
-			var id =  new IntPtr(_lastForeignId);
 
-			var wrenForeignObject = new WrenForeignObject<T>(id, data);
-			ForeignObjects.Add(id, wrenForeignObject);
 			IntPtr ptr = WrenImport.wrenSetSlotNewForeign(Ptr, slot, classSlot, new IntPtr(IntPtr.Size));
-			Marshal.WriteIntPtr(ptr, id);
+
+			var wrenForeignObject = new WrenForeignObject<T>(ptr, data);
+			Cache.AddForeignObject(ptr, wrenForeignObject);
+			Marshal.WriteIntPtr(ptr, Ptr);
 
 			return wrenForeignObject;
 		}
-		
+
 		/// <summary>
 		/// Reads a foreign object from <paramref name="slot"/>
 		///
@@ -759,10 +538,7 @@ namespace Wrenit
 		{
 			this.AssertSlot(slot, WrenValueType.Foreign);
 			IntPtr ptr = WrenImport.wrenGetSlotForeign(Ptr, slot);
-			IntPtr id = Marshal.ReadIntPtr(ptr);
-			if (ForeignObjects.TryGetValue(id, out WrenForeignObject obj) == false) return null;
-
-			return obj;
+			return Cache.GetForeignById(ptr);
 		}
 
 		/// <summary>

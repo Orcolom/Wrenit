@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Globalization;
 using System.Text;
@@ -33,6 +34,11 @@ namespace Wrenit.Utilities
 				if (usedAttributes.Contains(itAttribute)) continue;
 
 				string module = itAttribute.Module ?? WrenBuilder.GetResolvedName(itAttribute.ModuleType);
+				if (string.IsNullOrEmpty(module))
+				{
+					if (itAttribute.ModuleType != null) throw new NullReferenceException($"Could not find build class of type {itAttribute.ModuleType}");
+					throw new ArgumentNullException($"Can't import module without a name");
+				}
 				_sb.Append($"import \"{module}\"");
 
 				var attributesOfGroup = importAttributes.FindAll(searchAttribute =>

@@ -12,7 +12,7 @@ namespace Wrenit.Consoles.Examples
 		public static void HelloWorld()
 		{
 			// configuration will hold all your callbacks and settings 
-			var config = WrenConfig.GetDefaults();
+			var config = new WrenConfig();
 
 			// listen to write callbacks
 			config.WriteHandler += (vm, text) =>
