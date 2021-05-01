@@ -193,8 +193,9 @@ namespace Wrenit
 				return new InteropWrenForeignClassMethods()
 				{
 					AllocateFn = Marshal.GetFunctionPointerForDelegate<InteropWrenForeignMethod>(OnWrenCallForeignAllocator),
-					UserData = ptr,
+					AllocateUserData = ptr,
 					FinalizeFn = Marshal.GetFunctionPointerForDelegate<InteropWrenForeignFinalizer>(OnWrenCallForeignFinalizer),
+					FinalizeUserData = ptr,
 				};
 			}
 

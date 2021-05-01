@@ -645,13 +645,18 @@ namespace Wrenit.Interop
 		/// <summary>
 		/// user data bound to allocatFn
 		/// </summary>
-		public IntPtr UserData;
+		public IntPtr AllocateUserData;
 
 		/// <summary>
 		/// The callback invoked when the garbage collector is about to collect a foreign object's memory.
 		/// This may be `null` if the foreign class does not need to finalize.
 		/// </summary>
 		public IntPtr FinalizeFn;
+		
+		/// <summary>
+		/// user data bound to allocatFn
+		/// </summary>
+		public IntPtr FinalizeUserData;
 	}
 
 	/// <summary>
