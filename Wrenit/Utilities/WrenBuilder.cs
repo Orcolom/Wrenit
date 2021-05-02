@@ -27,7 +27,7 @@ namespace Wrenit.Utilities
 		/// get the resolved name of type
 		/// </summary>
 		/// <returns>string name or null</returns>
-		public static string GetResolvedName<T>()
+		public static string NameOf<T>()
 		{
 			return Names.TryGetValue(typeof(T), out string name) ? name : null;
 		}
@@ -37,7 +37,7 @@ namespace Wrenit.Utilities
 		/// </summary>
 		/// <param name="type"></param>
 		/// <returns>string name or null</returns>
-		public static string GetResolvedName(Type type)
+		public static string NameOf(Type type)
 		{
 			if (type == null) return null;
 			return Names.TryGetValue(type, out string name) ? name : null;
@@ -105,7 +105,7 @@ namespace Wrenit.Utilities
 			List<(MemberInfo, AWrenCodeAttribute)> attributedMembers = classType.GetAttributedMembers();
 
 			(MemberInfo, AWrenCodeAttribute) validAlloc = attributedMembers.Find(tuple =>
-				tuple.Item2 is WrenAllocatorAttribute && IsValidMethodSignature(tuple.Item1 as MethodInfo));
+				tuple.Item2 is WrenAllocatorAttribute && IsValidAllocateSignature(tuple.Item1 as MethodInfo));
 
 			(MemberInfo, AWrenCodeAttribute) validFin = attributedMembers.Find(tuple =>
 				tuple.Item2 is WrenFinalizerAttribute && IsValidFinalizerSignature(tuple.Item1 as MethodInfo));
@@ -115,7 +115,7 @@ namespace Wrenit.Utilities
 			string inherit = classAttribute.Inherit;
 			if (string.IsNullOrEmpty(inherit) && classAttribute.InheritType != null)
 			{
-				inherit = GetResolvedName(classAttribute.InheritType);
+				inherit = NameOf(classAttribute.InheritType);
 				if (string.IsNullOrEmpty(inherit))
 					throw new NullReferenceException($"Could not find build class of type {classAttribute.InheritType}");
 				if (ForeignClasses.Contains(classAttribute.InheritType))
@@ -128,13 +128,13 @@ namespace Wrenit.Utilities
 			List<WrenMethod> methods = new List<WrenMethod>();
 			List<WrenMethodAttribute> methodAttributes = new List<WrenMethodAttribute>();
 
-			WrenForeignMethod allocator = null;
+			WrenForeignMethod0 allocator = null;
 			WrenForeignFinalizer finalizer = null;
 			if (validAlloc.Item1 != null)
 			{
 				ForeignClasses.Add(classType);
 				allocator =
-					Delegate.CreateDelegate(typeof(WrenForeignMethod), validAlloc.Item1 as MethodInfo) as WrenForeignMethod;
+					Delegate.CreateDelegate(typeof(WrenForeignMethod0), validAlloc.Item1 as MethodInfo) as WrenForeignMethod0;
 			}
 
 			if (validFin.Item1 != null)
@@ -158,18 +158,19 @@ namespace Wrenit.Utilities
 					case WrenMethodAttribute methodAttribute:
 						MethodInfo method = attributeMember.Item1 as MethodInfo;
 
-						if (IsValidMethodSignature(method) == false) continue;
-
+						if (IsValidMethodSignature(method, methodAttribute, out var slots) == false) continue;
+						
 						string name = methodAttribute.Name ?? method.Name;
+						
 						if (IsOriginalAttribute(methodAttributes, methodAttribute, name) == false) continue;
 
 						methodAttributes.Add(methodAttribute);
 
-						WrenMethod wrenMethod = new WrenMethod(methodAttribute.Type, name, methodAttribute.ArgumentCount,
-							Delegate.CreateDelegate(typeof(WrenForeignMethod), method) as WrenForeignMethod);
+						WrenMethod wrenMethod = new WrenMethod(methodAttribute.Type, name, slots.Count,
+							new WrenForeignMethod(method, slots.Count));
 
 						sb.AppendAttributes(method.GetAttributes<WrenAttributeAttribute>());
-						sb.AddMethod(methodAttribute.Type, name, methodAttribute.ArgumentCount);
+						sb.AddMethod(methodAttribute.Type, name, slots);
 
 						methods.Add(wrenMethod);
 						break;
@@ -183,7 +184,7 @@ namespace Wrenit.Utilities
 			return wrenClass;
 		}
 
-		private static bool IsOriginalAttribute(List<WrenMethodAttribute> methods, WrenMethodAttribute attribute,
+		private static bool IsOriginalAttribute(IReadOnlyList<WrenMethodAttribute> methods, WrenMethodAttribute attribute,
 			string name)
 		{
 			for (int i = 0; i < methods.Count; i++)
@@ -213,12 +214,45 @@ namespace Wrenit.Utilities
 			return parameterInfos[0].ParameterType == typeof(WrenForeignObject);
 		}
 
-		private static bool IsValidMethodSignature(MethodInfo methodInfo)
+		private static bool IsValidAllocateSignature(MethodInfo methodInfo)
 		{
 			ParameterInfo[] parameterInfos = methodInfo.GetParameters();
 			if (parameterInfos.Length != 1) return false;
 
 			return parameterInfos[0].ParameterType == typeof(WrenVm);
+		}
+		
+		private static bool IsValidMethodSignature(MethodInfo methodInfo, WrenMethodAttribute attribute, out List<WrenSlotAttribute> wrenSlots)
+		{
+			ParameterInfo[] parameterInfos = methodInfo.GetParameters();
+			wrenSlots = new List<WrenSlotAttribute>();
+			if (parameterInfos.Length == 0) return false;
+			if (parameterInfos[0].ParameterType != typeof(WrenVm)) return false;
+
+			for (int i = 1; i < parameterInfos.Length; i++)
+			{
+				var name = parameterInfos[i].Name;
+				var type = parameterInfos[i].ParameterType;
+				if (type != typeof(IWrenSlot))
+				{
+					wrenSlots.Clear();
+					return false;
+				}
+
+				WrenSlotAttribute slotAttribute = parameterInfos[i].GetCustomAttribute<WrenSlotAttribute>();
+				if (slotAttribute == null) slotAttribute = new WrenSlotAttribute(name);
+				else if (slotAttribute.Name == null) slotAttribute.Name = name;
+				wrenSlots.Add(slotAttribute);
+			}
+
+			int expectedCount = WrenSignature.CorrectArgumentCount(attribute.Type, wrenSlots.Count);
+			if (expectedCount != wrenSlots.Count)
+				throw new TargetParameterCountException(
+					$"{attribute.Type} expected {expectedCount} {nameof(IWrenSlot)} but {methodInfo.Name} has {wrenSlots.Count}");
+
+			attribute.ArgumentCount = wrenSlots.Count;
+			
+			return true;
 		}
 
 		private static bool IsValidRawSignature(MethodInfo methodInfo)

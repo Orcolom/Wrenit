@@ -107,7 +107,7 @@ namespace Wrenit.Utilities
 		/// <inheritdoc cref="WrenConfig.BindForeignMethodHandler"/>
 		private WrenForeignMethod BindForeignMethodHandler(WrenVm vm, string module, string className, bool isStatic, string signature)
 		{
-				return FindClass(className)?.FindMethod(signature, isStatic)?.MethodBinding;
+				return FindClass(className)?.FindMethod(signature, isStatic)?.Method;
 		}
 	}
 
@@ -124,7 +124,7 @@ namespace Wrenit.Utilities
 		/// <summary>
 		/// the allocator binding if present
 		/// </summary>
-		private readonly WrenForeignMethod _allocator;
+		private readonly WrenForeignMethod0 _allocator;
 		
 		/// <summary>
 		/// the finalizer binding if present
@@ -151,7 +151,7 @@ namespace Wrenit.Utilities
 		/// <param name="allocator">allocator if wanted</param>
 		/// <param name="finalizer">finalizer if wanted</param>
 		/// <param name="methods">list of methods to add</param>
-		public WrenClass(string name, WrenForeignMethod allocator, WrenForeignFinalizer finalizer, params WrenMethod[] methods)
+		public WrenClass(string name, WrenForeignMethod0 allocator, WrenForeignFinalizer finalizer, params WrenMethod[] methods)
 		{
 			Name = name;
 			if (allocator != null)
@@ -170,7 +170,7 @@ namespace Wrenit.Utilities
 		/// <param name="allocator">allocator if wanted</param>
 		/// <param name="finalizer">finalizer if wanted</param>
 		/// <param name="methods">list of methods to add</param>
-		internal WrenClass(string name, WrenForeignMethod allocator, WrenForeignFinalizer finalizer, IEnumerable<WrenMethod> methods)
+		internal WrenClass(string name, WrenForeignMethod0 allocator, WrenForeignFinalizer finalizer, IEnumerable<WrenMethod> methods)
 		{
 			Name = name;
 			if (allocator != null)
@@ -226,7 +226,7 @@ namespace Wrenit.Utilities
 		/// <summary>
 		/// the method binding
 		/// </summary>
-		public readonly WrenForeignMethod MethodBinding;
+		public readonly WrenForeignMethod Method;
 		
 		/// <summary>
 		/// the method type
@@ -247,7 +247,7 @@ namespace Wrenit.Utilities
 		{
 			Signature = WrenSignature.CreateSignature(type, name, argumentCount);
 			IsStatic = type == WrenMethodType.StaticMethod;
-			MethodBinding = method;
+			Method = method;
 			_type = type;
 		}
 	}

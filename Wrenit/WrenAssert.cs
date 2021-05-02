@@ -15,7 +15,14 @@ namespace Wrenit
 			if (vm.IsAlive ==false)
 				throw new ObjectDisposedException("Tried to Interpret module in a disposed VM");
 		}
-		
+
+		[Conditional("DEBUG")]
+		internal static void AssertAlive(this WrenSlot slot)
+		{
+			if (slot.Vm == null || slot.Vm.IsAlive == false)
+				throw new ObjectDisposedException("Slot is no longer valid to use");
+		}
+
 		[Conditional("DEBUG")]
 		internal static void AssertAlive(this WrenHandle handle)
 		{
@@ -37,6 +44,9 @@ namespace Wrenit
 			var actualType = vm.GetSlotType(slot);
 			if (actualType != type) throw new TypeAccessException($"slot {slot} is of type {actualType} not of type {type}");
 		}
+		
+		[Conditional("DEBUG")]
+		internal static void AssertSlotType(this WrenSlot slot, WrenValueType type) => slot.Vm.AssertSlotType(slot.Index, type);
 		
 		[Conditional("DEBUG")]
 		internal static void AssertSlotCount(this WrenVm vm, int slot)

@@ -238,7 +238,7 @@ var r = Random.new(12345)
 		public void BindMethod()
 		{
 			string classA = "AClass";
-			WrenForeignMethod bindingA = vm => { };
+			WrenForeignMethod bindingA =new WrenForeignMethod(vm => { });
 
 			WrenConfig config = new WrenConfig();
 			config.WriteHandler += (vm, text) => { Assert.AreEqual(text, classA); };
@@ -279,9 +279,9 @@ var r = Random.new(12345)
 				vm.SetSlotNewForeign<float>(0, 0);
 			}
 
-			void InitA(WrenVm vm) { }
-			void InitB(WrenVm vm) { }
-
+			WrenForeignMethod InitA = new WrenForeignMethod(vm=> { });
+			WrenForeignMethod InitB = new WrenForeignMethod(vm=> { });
+			
 			WrenConfig config = new WrenConfig();
 			config.BindForeignMethodHandler += (vm, module, name, isStatic, signature) =>
 			{

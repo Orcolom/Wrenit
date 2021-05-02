@@ -316,6 +316,11 @@ namespace Wrenit
 			WrenImport.wrenSetSlotNull(Ptr, slot);
 		}
 
+		public IWrenSlot GetSlot(int slot)
+		{
+			return new WrenSlot(slot) {Vm = this};
+		}
+		
 		/// <summary>
 		/// Creates a handle for the value stored in <paramref name="slot"/>.
 		///

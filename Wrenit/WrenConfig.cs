@@ -110,7 +110,7 @@ namespace Wrenit
 		/// <para>
 		/// 	When a foreign method is declared in a class, this will be called with the
 		/// 	foreign method's module, class, and signature when the class body is
-		/// 	executed. It should return a <see cref="WrenForeignMethod"/> to the foreign function that will be
+		/// 	executed. It should return a <see cref="WrenForeignMethod0"/> to the foreign function that will be
 		/// 	bound to that method.
 		/// </para>
 		///

@@ -117,26 +117,29 @@ namespace Wrenit.Utilities
 	public class WrenMethodAttribute : AWrenCodeAttribute
 	{
 		public readonly string Name;
-		public readonly int ArgumentCount;
 		public readonly WrenMethodType Type;
-
+		internal int ArgumentCount;
+		
 		public WrenMethodAttribute(WrenMethodType type)
 		{
-			ArgumentCount = 0;
 			Type = type;
 		}
 
-		public WrenMethodAttribute(WrenMethodType type, int argumentCount = 0)
-		{
-			ArgumentCount = WrenSignature.CorrectArgumentCount(type, argumentCount);
-			Type = type;
-		}
-
-		public WrenMethodAttribute(WrenMethodType type, string name = null, int argumentCount = 0)
+		public WrenMethodAttribute(WrenMethodType type, string name = null)
 		{
 			Name = name;
-			ArgumentCount = WrenSignature.CorrectArgumentCount(type, argumentCount);
 			Type = type;
+		}
+	}
+	
+	[AttributeUsage(AttributeTargets.Parameter)]
+	public class WrenSlotAttribute : AWrenMetaAttribute
+	{
+		public string Name { get; internal set; } 
+
+		public WrenSlotAttribute(string name = null)
+		{
+			Name = name;
 		}
 	}
 }

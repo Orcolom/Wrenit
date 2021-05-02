@@ -33,7 +33,7 @@ namespace Wrenit.Utilities
 				WrenImportAttribute itAttribute = importAttributes[i];
 				if (usedAttributes.Contains(itAttribute)) continue;
 
-				string module = itAttribute.Module ?? WrenBuilder.GetResolvedName(itAttribute.ModuleType);
+				string module = itAttribute.Module ?? WrenBuilder.NameOf(itAttribute.ModuleType);
 				if (string.IsNullOrEmpty(module))
 				{
 					if (itAttribute.ModuleType != null) throw new NullReferenceException($"Could not find build class of type {itAttribute.ModuleType}");
@@ -52,7 +52,7 @@ namespace Wrenit.Utilities
 				for (int j = 0; j < attributesOfGroup.Count; j++)
 				{
 					WrenImportAttribute importAttribute = attributesOfGroup[j];
-					string @for = importAttribute.For ?? WrenBuilder.GetResolvedName(importAttribute.ForType);
+					string @for = importAttribute.For ?? WrenBuilder.NameOf(importAttribute.ForType);
 					if (string.IsNullOrEmpty(@for)) continue;
 
 					if (firstFor)
@@ -176,11 +176,10 @@ namespace Wrenit.Utilities
 			_indents--;
 		}
 
-		public void AddMethod(WrenMethodType type, string name, int argumentCount)
+		public void AddMethod(WrenMethodType type, string name, List<WrenSlotAttribute> slots)
 		{
 			AppendIndents();
-			_sb.Append(WrenSignature.CreateSignature(type, name, argumentCount,
-				SignatureStyle.ForeignImplementation));
+			_sb.Append(WrenSignature.CreateSignature(type, name, slots));
 			_sb.Append("\n");
 		}
 

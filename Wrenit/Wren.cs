@@ -223,10 +223,10 @@ namespace Wrenit
 			for (int i = 0; i < list.Length; i++)
 			{
 				WrenBindForeignMethod foreign = list[i] as WrenBindForeignMethod;
-				WrenForeignMethod methodBinding = foreign?.Invoke(vm, module, className, isStatic, signature);
-				if (methodBinding == null) continue;
+				WrenForeignMethod method = foreign?.Invoke(vm, module, className, isStatic, signature);
+				if (method == null) continue;
 
-				IntPtr id = vm.Cache.GetNewForeignMethodId(methodBinding);
+				IntPtr id = vm.Cache.GetNewForeignMethodId(method);
 				return new InteropBindForeignMethodResult()
 				{
 					ExecuteFn = Marshal.GetFunctionPointerForDelegate<InteropWrenForeignMethod>(OnWrenCallForeign),
@@ -273,15 +273,9 @@ namespace Wrenit
 		}
 
 		#endregion
-
 	}
 
 	#region Delagates
-
-	/// <summary>
-	/// Method that will be called from wren 
-	/// </summary>
-	public delegate void WrenForeignMethod(WrenVm vm);
 
 	/// <inheritdoc cref="InteropWrenForeignClassMethods.FinalizeFn"/>
 	public delegate void WrenForeignFinalizer(WrenForeignObject data);
@@ -317,7 +311,7 @@ namespace Wrenit
 		/// <summary>
 		/// a foreign method binding for the allocator
 		/// </summary>
-		public readonly WrenForeignMethod Allocator;
+		public readonly WrenForeignMethod0 Allocator;
 	
 		/// <summary>
 		/// a foreign method binding for the finalizer
@@ -327,7 +321,7 @@ namespace Wrenit
 		/// <summary>
 		/// create a class binding with only an allocator
 		/// </summary>
-		public WrenForeignClass(WrenForeignMethod allocator)
+		public WrenForeignClass(WrenForeignMethod0 allocator)
 		{
 			Allocator = allocator;
 			Finalizer = null;
@@ -336,7 +330,7 @@ namespace Wrenit
 		/// <summary>
 		/// create a class binding
 		/// </summary>
-		public WrenForeignClass(WrenForeignMethod allocator, WrenForeignFinalizer finalizer)
+		public WrenForeignClass(WrenForeignMethod0 allocator, WrenForeignFinalizer finalizer)
 		{
 			Allocator = allocator;
 			Finalizer = finalizer;

@@ -54,10 +54,12 @@
     <Compile Include="WrenAssert.cs" />
     <Compile Include="WrenCache.cs" />
     <Compile Include="WrenExtensions.cs" />
+    <Compile Include="WrenForeignFunction.cs" />
     <Compile Include="WrenForeignObject.cs" />
     <Compile Include="WrenHandle.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WrenConfig.cs" />
+    <Compile Include="WrenSlot.cs" />
     <Compile Include="WrenVM.cs" />
   </ItemGroup>
   <ItemGroup>

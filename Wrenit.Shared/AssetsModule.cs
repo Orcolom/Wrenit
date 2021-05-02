@@ -21,30 +21,33 @@ namespace Wrenit.Shared
 		[WrenClass]
 		public class AssetSystem
 		{
-			[WrenMethod(WrenMethodType.StaticMethod, 1)]
-			[WrenAttribute("args", "a", "path of the asset")]
-			private static void Load(WrenVm vm)
+			[WrenMethod(WrenMethodType.StaticMethod)]
+			private static void Load(WrenVm vm, IWrenSlot path, IWrenSlot data)
+			{
+				Load(vm, path);
+			}
+			
+			[WrenMethod(WrenMethodType.StaticMethod)]
+			private static void Load(WrenVm vm, IWrenSlot path)
 			{
 				// load argument in slot 1
-				if (vm.GetSlotType(1) != WrenValueType.String)
+				if (path.Type != WrenValueType.String)
 				{
 					vm.SetSlotString(0, "Expected string type");
 					vm.AbortFiber(0);
 					return;
 				}
 
-				string path = vm.GetSlotString(1);
-				
 				// get Asset class variable from module Assets and store in slot 0
 				if (vm.HasModule<AssetsModule>() == false)
 				{
-					vm.AbortFiber($"Cant find module {WrenBuilder.GetResolvedName<AssetsModule>()}");
+					vm.AbortFiber($"Cant find module {WrenBuilder.NameOf<AssetsModule>()}");
 					return;
 				}
 
 				if (vm.HasVariable<AssetsModule, Asset>() == false)
 				{
-					vm.AbortFiber($"Cant find name {WrenBuilder.GetResolvedName<Asset>()} in module {WrenBuilder.GetResolvedName<AssetsModule>()}");
+					vm.AbortFiber($"Cant find name {WrenBuilder.NameOf<Asset>()} in module {WrenBuilder.NameOf<AssetsModule>()}");
 					return;
 				}
 				
@@ -57,7 +60,7 @@ namespace Wrenit.Shared
 				var foreign = vm.GetSlotForeign<AssetData>(0);
 				
 				// fill in object
-				foreign.TypedData.Path = path;
+				foreign.TypedData.Path = path.GetString();
 			}
 		}
 		

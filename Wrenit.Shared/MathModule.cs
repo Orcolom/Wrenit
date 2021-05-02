@@ -43,31 +43,31 @@ namespace Wrenit.Shared
 				return @"toString { ""{%(x), %(y)}"" }";
 			}
 
-			[WrenMethod(WrenMethodType.Construct, "new", 2)]
-			public static void NewZero(WrenVm vm)
+			[WrenMethod(WrenMethodType.Construct, "new")]
+			public static void NewZero(WrenVm vm, IWrenSlot x, IWrenSlot y)
 			{
 				var fo = vm.GetSlotForeign<Vector>(0);
 				fo.TypedData = new Vector
 				{
-					x = vm.GetSlotDouble(1),
-					y = vm.GetSlotDouble(2)
+					x = x.GetDouble(),
+					y = y.GetDouble(),
 				};
 			}
 
-			[WrenMethod(WrenMethodType.Method, 2)]
-			public static void Add(WrenVm vm)
+			[WrenMethod(WrenMethodType.Method)]
+			public static void Add(WrenVm vm, IWrenSlot x, IWrenSlot y)
 			{
 				var fo = vm.GetSlotForeign<Vector>(0);
-				fo.TypedData.x += vm.GetSlotDouble(1);
-				fo.TypedData.y += vm.GetSlotDouble(2);
+				fo.TypedData.x += x.GetDouble();
+				fo.TypedData.y += y.GetDouble();
 			}
 
-			[WrenMethod(WrenMethodType.Times, 1)]
-			public static void Multiply(WrenVm vm)
+			[WrenMethod(WrenMethodType.Times)]
+			public static void Multiply(WrenVm vm, IWrenSlot other)
 			{
 				var fo = vm.GetSlotForeign<Vector>(0);
-				fo.TypedData.x *= vm.GetSlotDouble(1);
-				fo.TypedData.y *= vm.GetSlotDouble(1);
+				fo.TypedData.x *= other.GetDouble();
+				fo.TypedData.y *= other.GetDouble();
 			}
 
 			[WrenMethod(WrenMethodType.FieldGetter, "x")]
@@ -78,18 +78,20 @@ namespace Wrenit.Shared
 			}
 
 			[WrenMethod(WrenMethodType.FieldSetter, "x")]
-			public static void SetX(WrenVm vm)
+			public static void SetX(WrenVm vm, IWrenSlot other)
 			{
 				var fo = vm.GetSlotForeign<Vector>(0);
-				fo.TypedData.x = vm.GetSlotDouble(0);
+				fo.TypedData.x = other.GetDouble();
 			}
 
 			[WrenMethod(WrenMethodType.SubScriptGetter, "x")] // names get ignored for signatures that dont need it
-			public static void Subscript(WrenVm vm)
+			public static void Subscript(WrenVm vm, IWrenSlot index)
 			{
 				var fo = vm.GetSlotForeign<Vector>(0);
-				int index = (int) vm.GetSlotDouble(1);
-				if (index == 0) vm.SetSlotDouble(0, fo.TypedData.x);
+				if (index.GetDouble() != 0) return;
+
+				index.SetDouble(fo.TypedData.x);
+				index.SetAsReturn();
 			}
 		}
 	}

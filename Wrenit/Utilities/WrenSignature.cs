@@ -90,13 +90,24 @@ namespace Wrenit.Utilities
 		/// <param name="argumentCount">amount of arguments wanted</param>
 		/// <param name="style">style of signature</param>
 		/// <returns>the wren style signature</returns>
-		public static string CreateSignature(WrenMethodType type, string name, int argumentCount, SignatureStyle style = SignatureStyle.Signature)
+		public static string CreateSignature(WrenMethodType type, string name, int argumentCount,
+			SignatureStyle style = SignatureStyle.Signature)
+		{
+			argumentCount = CorrectArgumentCount(type, argumentCount);
+			string arguments = CreateArgumentList(argumentCount, style != SignatureStyle.Signature);
+			return CreateSignature(type, name, arguments, style);
+		}
+
+		internal static string CreateSignature(WrenMethodType type, string name, List<WrenSlotAttribute> slots)
+		{
+			string arguments = CreateArgumentList(slots);
+			return CreateSignature(type, name, arguments, SignatureStyle.ForeignImplementation);
+		}
+		
+		private static string CreateSignature(WrenMethodType type, string name, string arguments, SignatureStyle style)
 		{
 			WrenSignature signature = WrenSignature.Signatures[type];
 			
-			argumentCount = CorrectArgumentCount(type, argumentCount);
-			string arguments = CreateArgumentList(argumentCount, style != SignatureStyle.Signature);
-
 			if (string.IsNullOrEmpty(signature.ForcedName) == false)
 			{
 				name = signature.ForcedName;
@@ -144,6 +155,23 @@ namespace Wrenit.Utilities
 			{
 				arguments += implement ? (char) ('a' + i) : '_';
 				if (i + 1 < argumentCount) arguments += ',';
+			}
+
+			return arguments;
+		}
+				
+		/// <summary>
+		/// creates an argument list string 
+		/// </summary>
+		/// <param name="argumentCount">amount of wanted arguments</param>
+		/// <param name="implement">do an argument list for an implementation signature</param>
+		internal static string CreateArgumentList(List<WrenSlotAttribute> slots)
+		{
+			string arguments = null;
+			for (int i = 0; i < slots.Count; i++)
+			{
+				arguments += slots[i].Name;
+				if (i + 1 < slots.Count) arguments += ',';
 			}
 
 			return arguments;
