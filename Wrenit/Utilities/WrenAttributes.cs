@@ -104,6 +104,17 @@ namespace Wrenit.Utilities
 		}
 	}
 
+	[AttributeUsage(AttributeTargets.Class)]
+	public class WrenClassAssumedAttribute : AWrenCodeAttribute
+	{
+		public readonly string Name;
+
+		public WrenClassAssumedAttribute(string name = null)
+		{
+			Name = name;
+		}
+	}
+	
 	[AttributeUsage(AttributeTargets.Method)]
 	public class WrenAllocatorAttribute : AWrenCodeAttribute { }
 

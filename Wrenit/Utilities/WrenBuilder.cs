@@ -22,25 +22,33 @@ namespace Wrenit.Utilities
 		/// </summary>
 		private static readonly List<Type> ForeignClasses = new List<Type>();
 
-		
+
 		/// <summary>
 		/// get the resolved name of type
 		/// </summary>
 		/// <returns>string name or null</returns>
-		public static string NameOf<T>()
-		{
-			return Names.TryGetValue(typeof(T), out string name) ? name : null;
-		}
-		
+		public static string NameOf<T>() => NameOf(typeof(T));
+
 		/// <summary>
 		/// get the resolved name of type
 		/// </summary>
 		/// <param name="type"></param>
+		/// <param name="assumeWillExist"></param>
 		/// <returns>string name or null</returns>
-		public static string NameOf(Type type)
+		public static string NameOf(Type type, bool assumeWillExist = true)
 		{
-			if (type == null) return null;
-			return Names.TryGetValue(type, out string name) ? name : null;
+			if (type == null) throw new NullReferenceException("argument 'type' is null");
+
+			if (Names.TryGetValue(type, out string name)) return name;
+			if (assumeWillExist == false) return null;
+			
+			return type.GetAttribute<AWrenCodeAttribute>() switch
+			{
+				WrenModuleAttribute mod => AddName(type, mod),
+				WrenClassAttribute cls => AddName(type, cls),
+				WrenClassAssumedAttribute cls => AddName(type, cls),
+				_ => throw new ArgumentException($"{type} is not marked as a module or class")
+			};
 		}
 		
 		/// <summary>
@@ -90,13 +98,17 @@ namespace Wrenit.Utilities
 					case WrenManualSourceAttribute _:
 						AppendManualSource(members[i].Item1 as MethodInfo, sb);
 						break;
+										
+					case WrenClassAssumedAttribute classAssumedAttribute:
+						AddName(members[i].Item1 as Type, classAssumedAttribute);
+						break;
 				}
 			}
 
 			string source = sb.ToString();
-			WrenModule module = new WrenModule(moduleAttribute.Name ?? moduleType.Name, source, classes);
+			string name = AddName(moduleType, moduleAttribute);
+			WrenModule module = new WrenModule(name, source, classes);
 			Modules.Add(moduleType, module);
-			Names.Add(moduleType, module.Name);
 			return module;
 		}
 
@@ -110,14 +122,14 @@ namespace Wrenit.Utilities
 			(MemberInfo, AWrenCodeAttribute) validFin = attributedMembers.Find(tuple =>
 				tuple.Item2 is WrenFinalizerAttribute && IsValidFinalizerSignature(tuple.Item1 as MethodInfo));
 
-			string className = classAttribute.Name ?? classType.Name;
+			string className = AddName(classType, classAttribute);
 
 			string inherit = classAttribute.Inherit;
 			if (string.IsNullOrEmpty(inherit) && classAttribute.InheritType != null)
 			{
-				inherit = NameOf(classAttribute.InheritType);
+				inherit = NameOf(classAttribute.InheritType, false);
 				if (string.IsNullOrEmpty(inherit))
-					throw new NullReferenceException($"Could not find build class of type {classAttribute.InheritType}");
+					throw new NullReferenceException($"Could not find inherited class of type {classAttribute.InheritType}. inherited classes should be build beforehand");
 				if (ForeignClasses.Contains(classAttribute.InheritType))
 					throw new InvalidOperationException("Cant inherit from a foreign class");
 			}
@@ -179,8 +191,7 @@ namespace Wrenit.Utilities
 
 			sb.CloseClass();
 
-			var wrenClass = new WrenClass(classAttribute.Name ?? classType.Name, allocator, finalizer, methods);
-			Names.Add(classType, wrenClass.Name);
+			var wrenClass = new WrenClass(className, allocator, finalizer, methods);
 			return wrenClass;
 		}
 
@@ -206,6 +217,34 @@ namespace Wrenit.Utilities
 			sb.AddRaw((string)methodInfo.Invoke(null,null));
 		}
 
+		
+		private static string AddName(Type type, WrenModuleAttribute attribute)
+		{
+			if (Names.ContainsKey(type)) return Names[type];
+			
+			string name = attribute.Name ?? type.Name;
+			Names.Add(type, name);
+			return name;
+		}
+		
+		private static string AddName(Type type, WrenClassAttribute attribute)
+		{
+			if (Names.ContainsKey(type)) return Names[type];
+			
+			string name = attribute.Name ?? type.Name;
+			Names.Add(type, name);
+			return name;
+		}
+		
+		private static string AddName(Type type, WrenClassAssumedAttribute attribute)
+		{
+			if (Names.ContainsKey(type)) return Names[type];
+			
+			string name = attribute.Name ?? type.Name;
+			Names.Add(type, name);
+			return name;
+		}
+		
 		private static bool IsValidFinalizerSignature(MethodInfo methodInfo)
 		{
 			ParameterInfo[] parameterInfos = methodInfo.GetParameters();

@@ -21,12 +21,16 @@ namespace Wrenit.Shared
 		[WrenClass]
 		public class AssetSystem
 		{
+
 			[WrenMethod(WrenMethodType.StaticMethod)]
-			private static void Load(WrenVm vm, IWrenSlot path, IWrenSlot data)
-			{
-				Load(vm, path);
-			}
-			
+			private static void Load(WrenVm vm, IWrenSlot s0, IWrenSlot s1, IWrenSlot s2, IWrenSlot s3, IWrenSlot s4) =>
+				Load(vm, s1);
+
+			[WrenMethod(WrenMethodType.StaticMethod)]
+			private static void Load(WrenVm vm, IWrenSlot s0, IWrenSlot s1, IWrenSlot s2, IWrenSlot s3, IWrenSlot s4,
+				IWrenSlot s5, IWrenSlot s6, IWrenSlot s7, IWrenSlot s8, IWrenSlot s9, IWrenSlot s10, IWrenSlot s11,
+				IWrenSlot s12, IWrenSlot s13, IWrenSlot s14, IWrenSlot s15) => Load(vm, s0);
+
 			[WrenMethod(WrenMethodType.StaticMethod)]
 			private static void Load(WrenVm vm, IWrenSlot path)
 			{

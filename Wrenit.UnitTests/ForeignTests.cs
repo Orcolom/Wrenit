@@ -18,6 +18,7 @@ namespace Wrenit.UnitTests
 import ""Assets"" for Asset, AssetSystem
 
 var asset = AssetSystem.Load(""{path}"")
+var asset2 = AssetSystem.Load(""{path}"",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
 
 System.write(asset.path)
 ";
@@ -83,8 +84,8 @@ System.write(v.x)
 		public void InvalidInheritance()
 		{
 			
-			Assert.Throws<ArgumentNullException>(() => WrenBuilder.GetModule<NullImportModule>(), "Should not be able to import a null(string) class");
-			Assert.Throws<ArgumentNullException>(() => WrenBuilder.GetModule<NullImport2Module>(), "Should not be able to import a null(type) class");
+			Assert.Throws<NullReferenceException>(() => WrenBuilder.GetModule<NullImportModule>(), "Should not be able to import a null(string) class");
+			Assert.Throws<NullReferenceException>(() => WrenBuilder.GetModule<NullImport2Module>(), "Should not be able to import a null(type) class");
 			Assert.Throws<NullReferenceException>(() => WrenBuilder.GetModule<MissingImportModule>(), "Should not be able to import a class that doesnt exist");
 		}
 	}
