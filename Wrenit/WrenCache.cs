@@ -19,6 +19,13 @@ namespace Wrenit
 		internal static InteropWrenForeignMethod CatchFn;
 		internal static InteropWrenForeignMethod ForeignFn;
 		internal static InteropWrenLoadModuleComplete LoadModuleCompleteFn;
+		internal static InteropWrenWrite WriteFn;
+		internal static InteropWrenError ErrorFn;
+		internal static InteropWrenResolveModule ResolveFn;
+		internal static InteropWrenLoadModule LoadFn;
+		internal static InteropWrenBindForeignMethod BindMethodFn;
+		internal static InteropWrenBindForeignClass BindClassFn;
+
 		internal static WeakReference<WrenVm> AddVm(IntPtr ptr, WrenVm vm)
 		{
 			var @ref = new WeakReference<WrenVm>(vm);
@@ -110,7 +117,7 @@ namespace Wrenit
 		/// <param name="fo">object to add</param>
 		internal void AddForeignObject(IntPtr id, WrenForeignObject fo)
 		{
-			//RemoveForeignObject(id); // wren decided to reuse memory
+			RemoveForeignObject(id); // wren decided to reuse memory
 			_foreignObjects.Add(id, fo);
 		}
 		

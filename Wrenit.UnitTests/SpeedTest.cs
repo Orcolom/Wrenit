@@ -12,7 +12,7 @@ namespace Wrenit.UnitTests
 		public void Speed()
 		{
 			string main = $@"
-for (i in 0..100000) {{
+for (i in 0..200000) {{
 	System.print(i)
 }}
 ";

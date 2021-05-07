@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using Wrenit.Shared;
 using Wrenit.Utilities;
 
@@ -8,25 +9,22 @@ namespace Wrenit.Consoles
 	{
 		public static void Main(string[] args)
 		{
-			string path = "./a/path/to/file.ext";
 			string main = $@"
 import ""Assets"" for Asset, AssetSystem
 
-var asset = AssetSystem.Load(""{path}"")
-
-System.write(asset.path)
+for (i in 0..10000000) {{
+	var asset = AssetSystem.Load(""a/path"")
+	System.print(i)
+}}
 ";
 			var config = new WrenConfig();
-			config.WriteHandler += (wrenVm, text) =>
-			{
-				Console.WriteLine("e");
-			};
-				
-			var vm = new WrenVm(config);
-			vm.Config.BindModule<AssetsModule>();
+			config.WriteHandler += (vm, msg) => { };
+			WrenBuilder.GetModule<AssetsModule>().Bind(config);
 			
-			var result = vm.Interpret("<main>", main);
-			Console.WriteLine("x");
+			var vmx = new WrenVm(config);
+			Debug.Write("start");
+			vmx.Interpret("<main>", main);
+			Debug.Write("end");
 		}
 	}
 }

@@ -51,12 +51,12 @@ namespace Wrenit
 				InitialHeapSize = new UIntPtr(Config.InitialHeapSize),
 				MinHeapSize = new UIntPtr(Config.MinHeapSize),
 				HeapGrowthPercent = Config.HeapGrowthPercent,
-				WriteFn = Wren.OnWrenWrite,
-				ErrorFn = Wren.OnWrenError,
-				ResolveModuleFn = Wren.OnWrenResolveModule,
-				LoadModuleFn = Wren.OnWrenLoadModule,
-				BindForeignMethodFn = Wren.OnWrenBindForeignMethod,
-				BindForeignClassFn = Wren.OnWrenBindForeignClass,
+				WriteFn = WrenCache.WriteFn,
+				ErrorFn = WrenCache.ErrorFn,
+				ResolveModuleFn = WrenCache.ResolveFn,
+				LoadModuleFn = WrenCache.LoadFn,
+				BindForeignMethodFn = WrenCache.BindMethodFn,
+				BindForeignClassFn = WrenCache.BindClassFn,
 			};
 
 			Ptr = WrenImport.wrenNewVM(interopConfiguration);

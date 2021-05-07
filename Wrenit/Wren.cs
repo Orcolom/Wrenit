@@ -44,11 +44,18 @@ namespace Wrenit
 			DefaultConfig = new InteropWrenConfiguration();
 			WrenImport.wrenInitConfiguration(DefaultConfig);
 
+			// avoid delegates to be garbage collected
 			WrenCache.AllocateFn += OnWrenCallForeignAllocator;
 			WrenCache.FinalizeFn += OnWrenCallForeignFinalizer;
 			WrenCache.CatchFn += OnWrenCallCatch;
 			WrenCache.ForeignFn += OnWrenCallForeign;
 			WrenCache.LoadModuleCompleteFn += OnWrenLoadComplete;
+			WrenCache.WriteFn += OnWrenWrite;
+			WrenCache.ErrorFn += OnWrenError;
+			WrenCache.ResolveFn += OnWrenResolveModule;
+			WrenCache.LoadFn += OnWrenLoadModule;
+			WrenCache.BindMethodFn += OnWrenBindForeignMethod;
+			WrenCache.BindClassFn += OnWrenBindForeignClass;
 
 			return true;
 		}
