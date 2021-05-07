@@ -106,8 +106,8 @@ namespace Wrenit
 		/// <summary>
 		/// list of foreign objects created by the vm. They dont get garbage collected without disposing them 
 		/// </summary>
-		private readonly Dictionary<IntPtr, WrenForeignObject>
-			_foreignObjects = new Dictionary<IntPtr, WrenForeignObject>();
+		internal readonly Dictionary<IntPtr, WrenForeignObject>
+			ForeignObjects = new Dictionary<IntPtr, WrenForeignObject>();
 
 		/// <summary>
 		/// remove a foreign object from this vm's list.
@@ -118,7 +118,7 @@ namespace Wrenit
 		internal void AddForeignObject(IntPtr id, WrenForeignObject fo)
 		{
 			RemoveForeignObject(id); // wren decided to reuse memory
-			_foreignObjects.Add(id, fo);
+			ForeignObjects.Add(id, fo);
 		}
 		
 		/// <summary>
@@ -128,9 +128,9 @@ namespace Wrenit
 		/// <param name="id">pointer of the object</param>
 		internal void RemoveForeignObject(IntPtr id)
 		{
-			if (_foreignObjects.ContainsKey(id) == false) return;
-			_foreignObjects[id].Id = IntPtr.Zero;
-			_foreignObjects.Remove(id);
+			if (ForeignObjects.ContainsKey(id) == false) return;
+			ForeignObjects[id].Id = IntPtr.Zero;
+			ForeignObjects.Remove(id);
 		}
 
 		/// <summary>
@@ -140,7 +140,7 @@ namespace Wrenit
 		/// <returns>returns object if found</returns>
 		internal WrenForeignObject GetForeignById(IntPtr id)
 		{
-			return _foreignObjects.ContainsKey(id) == false ? null : _foreignObjects[id];
+			return ForeignObjects.ContainsKey(id) == false ? null : ForeignObjects[id];
 		}
 
 		#endregion

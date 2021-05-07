@@ -27,14 +27,34 @@ System.write(asset.path)
 			{
 				Assert.AreEqual(path, text);
 			};
-				
+
 			WrenBuilder.GetModule<AssetsModule>().Bind(config);
-			
+
 			var vm = new WrenVm(config);
 			var result = vm.Interpret("<main>", main);
 			if (result != WrenInterpretResult.Success) Assert.Fail("Expected successful interpret");
 		}
-		
+
+		[Test]
+		public void Asset10000()
+		{
+			string main = $@"
+import ""Assets"" for Asset, AssetSystem
+
+for (i in 0...10000) {{
+	var asset = AssetSystem.Load(""a/path"")
+}}
+";
+			var config = new WrenConfig();
+			WrenBuilder.GetModule<AssetsModule>().Bind(config);
+
+			var vm = new WrenVm(config);
+			var result = vm.Interpret("<main>", main);
+			if (result != WrenInterpretResult.Success) Assert.Fail("Expected successful interpret");
+			vm.CollectGarbage();
+			Assert.AreEqual(0, vm.Cache.ForeignObjects.Count);
+		}
+
 		[Test]
 		public void ForeignClassInherit()
 		{

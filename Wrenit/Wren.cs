@@ -282,7 +282,12 @@ namespace Wrenit
 			WrenVm vm = WrenCache.GetVm(vmPtr);
 			WrenForeignObject obj = vm?.Cache.GetForeignById(data);
 			if (obj == null) return;
-			vm.Cache.GetForeignClassById(data)?.Finalizer?.Invoke(obj);
+			try{
+				vm.Cache.GetForeignClassById(userData)?.Finalizer?.Invoke(obj);
+			} finally{
+				vm.Cache.RemoveForeignObject(data);
+			}
+			
 		}
 
 		#endregion
