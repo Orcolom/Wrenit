@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using Wrenit.Interop;
 
 namespace Wrenit
@@ -15,6 +14,11 @@ namespace Wrenit
 		private static readonly Dictionary<IntPtr, WeakReference<WrenVm>> VmList =
 			new Dictionary<IntPtr, WeakReference<WrenVm>>();
 
+		internal static InteropWrenForeignMethod AllocateFn;
+		internal static InteropWrenForeignFinalizer FinalizeFn;
+		internal static InteropWrenForeignMethod CatchFn;
+		internal static InteropWrenForeignMethod ForeignFn;
+		internal static InteropWrenLoadModuleComplete LoadModuleCompleteFn;
 		internal static WeakReference<WrenVm> AddVm(IntPtr ptr, WrenVm vm)
 		{
 			var @ref = new WeakReference<WrenVm>(vm);
@@ -34,7 +38,7 @@ namespace Wrenit
 		}
 
 		#endregion
-		
+
 		#region Foreign Methods
 
 		/// <summary>
@@ -54,10 +58,11 @@ namespace Wrenit
 		{
 			return _wrenForeignMethods.TryGetValue(id, out var value) ? value : null;
 		}
-		
+
+
 		#endregion
 
-			
+
 		#region Foreign Class
 
 		/// <summary>
@@ -79,8 +84,7 @@ namespace Wrenit
 		}
 		
 		#endregion
-
-
+		
 		#region Handles
 
 		/// <summary>
@@ -88,14 +92,7 @@ namespace Wrenit
 		/// </summary>
 		internal readonly Dictionary<IntPtr, WrenHandle> Handles = new Dictionary<IntPtr, WrenHandle>();
 
-
 		#endregion
-
-		public WrenSignatureHandle AddHandle(WrenVm wrenVm, IntPtr handlePtr)
-		{
-			throw new NotImplementedException();
-		}
-
 
 		#region Foreign Objects
 
@@ -110,8 +107,10 @@ namespace Wrenit
 		/// Note this does not free the object
 		/// </summary>
 		/// <param name="id">pointer of the object</param>
+		/// <param name="fo">object to add</param>
 		internal void AddForeignObject(IntPtr id, WrenForeignObject fo)
 		{
+			//RemoveForeignObject(id); // wren decided to reuse memory
 			_foreignObjects.Add(id, fo);
 		}
 		
@@ -123,7 +122,7 @@ namespace Wrenit
 		internal void RemoveForeignObject(IntPtr id)
 		{
 			if (_foreignObjects.ContainsKey(id) == false) return;
-
+			_foreignObjects[id].Id = IntPtr.Zero;
 			_foreignObjects.Remove(id);
 		}
 

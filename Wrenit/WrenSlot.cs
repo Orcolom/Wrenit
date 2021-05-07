@@ -1,8 +1,4 @@
-﻿using System;
-using System.Runtime.InteropServices;
-using Wrenit.Interop;
-
-namespace Wrenit
+﻿namespace Wrenit
 {
 	public interface IWrenSlot
 	{
@@ -62,7 +58,7 @@ namespace Wrenit
 		public void SetAsReturn();
 	}
 
-	internal struct WrenSlot : IWrenSlot, IWrenListSlot, IWrenMapSlot
+	internal class WrenSlot : IWrenSlot, IWrenListSlot, IWrenMapSlot
 	{
 		public int Index { get; }
 		internal WrenVm Vm;

@@ -51,6 +51,7 @@
     <Compile Include="ForeignTests.cs" />
     <Compile Include="SetupTests.cs" />
     <Compile Include="SlotTests.cs" />
+    <Compile Include="SpeedTest.cs" />
     <Compile Include="VmTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

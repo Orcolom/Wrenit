@@ -43,7 +43,13 @@ namespace Wrenit
 			// load in defaults from unmanaged code, if not already done
 			DefaultConfig = new InteropWrenConfiguration();
 			WrenImport.wrenInitConfiguration(DefaultConfig);
-			
+
+			WrenCache.AllocateFn += OnWrenCallForeignAllocator;
+			WrenCache.FinalizeFn += OnWrenCallForeignFinalizer;
+			WrenCache.CatchFn += OnWrenCallCatch;
+			WrenCache.ForeignFn += OnWrenCallForeign;
+			WrenCache.LoadModuleCompleteFn += OnWrenLoadComplete;
+
 			return true;
 		}
 
@@ -159,7 +165,7 @@ namespace Wrenit
 			{
 				Source = ptr,
 				UserData = ptr,
-				OnComplete = Marshal.GetFunctionPointerForDelegate<InteropWrenLoadModuleComplete>(OnWrenLoadComplete),
+				OnComplete = Marshal.GetFunctionPointerForDelegate(WrenCache.LoadModuleCompleteFn),
 			};
 		}
 
@@ -192,9 +198,9 @@ namespace Wrenit
 
 				return new InteropWrenForeignClassMethods()
 				{
-					AllocateFn = Marshal.GetFunctionPointerForDelegate<InteropWrenForeignMethod>(OnWrenCallForeignAllocator),
+					AllocateFn = Marshal.GetFunctionPointerForDelegate(WrenCache.AllocateFn),
 					AllocateUserData = ptr,
-					FinalizeFn = Marshal.GetFunctionPointerForDelegate<InteropWrenForeignFinalizer>(OnWrenCallForeignFinalizer),
+					FinalizeFn = Marshal.GetFunctionPointerForDelegate(WrenCache.FinalizeFn),
 					FinalizeUserData = ptr,
 				};
 			}
@@ -206,7 +212,7 @@ namespace Wrenit
 				$"Allocator for foreign {className} not defined in bindings");
 			return new InteropWrenForeignClassMethods()
 			{
-				AllocateFn = Marshal.GetFunctionPointerForDelegate<InteropWrenForeignMethod>(OnWrenCallCatch),
+				AllocateFn = Marshal.GetFunctionPointerForDelegate(WrenCache.CatchFn),
 			};
 		}
 
@@ -229,7 +235,7 @@ namespace Wrenit
 				IntPtr id = vm.Cache.GetNewForeignMethodId(method);
 				return new InteropBindForeignMethodResult()
 				{
-					ExecuteFn = Marshal.GetFunctionPointerForDelegate<InteropWrenForeignMethod>(OnWrenCallForeign),
+					ExecuteFn = Marshal.GetFunctionPointerForDelegate(WrenCache.ForeignFn),
 					UserData = id,
 				};
 			}
@@ -254,7 +260,7 @@ namespace Wrenit
 		#if ENABLE_IL2CPP
 		[AOT.MonoPInvokeCallback(typeof(InteropWrenForeignMethod))]
 		#endif
-		private static void OnWrenCallForeignAllocator(IntPtr ptr, IntPtr userData)
+		internal static void OnWrenCallForeignAllocator(IntPtr ptr, IntPtr userData)
 		{
 			WrenVm vm = WrenCache.GetVm(ptr);
 			vm?.Cache.GetForeignClassById(userData)?.Allocator?.Invoke(vm);

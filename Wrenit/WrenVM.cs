@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Runtime.Remoting.Messaging;
 using Wrenit.Interop;
 
 namespace Wrenit
@@ -116,6 +114,12 @@ namespace Wrenit
 			WrenInterpretResult error = WrenImport.wrenInterpret(Ptr, module, source);
 			return error;
 		}
+
+		public void CollectGarbage()
+		{
+			WrenImport.wrenCollectGarbage(Ptr);
+		}
+
 
 		/// <summary>
 		/// Creates a handle that can be used to invoke a method with <paramref name="signature"/>
@@ -506,17 +510,18 @@ namespace Wrenit
 		/// <summary>
 		/// Creates a new instance of the foreign class stored in <paramref name="classSlot"/>
 		/// and places the resulting object in <paramref name="slot"/>.
-		///
+		/// 
 		/// <para>
 		/// 	This does not invoke the foreign class's constructor on the new instance. If
 		/// 	you need that to happen, call the constructor from Wren, which will then
 		/// 	call the allocator foreign method. In there, call this to create the object
 		/// 	and then the constructor will be invoked when the allocator returns.
 		/// </para>
-		///
+		/// 
 		/// </summary>
 		/// <param name="slot">slot to get</param>
 		/// <param name="classSlot">slot to store in</param>
+		/// <param name="data">data</param>
 		public WrenForeignObject<T> SetSlotNewForeign<T>(int slot, int classSlot, T data = default)
 		{
 			this.AssertSlot(slot);
